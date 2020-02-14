@@ -42,6 +42,7 @@
 		DF1EED1E23F6438E001DD8D1 /* libGLEW.2.1.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGLEW.2.1.0.dylib; path = ../../../../../../usr/local/Cellar/glew/2.1.0_1/lib/libGLEW.2.1.0.dylib; sourceTree = "<group>"; };
 		DF1EED2023F643AC001DD8D1 /* libglfw.3.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libglfw.3.3.dylib; path = ../../../../../../usr/local/Cellar/glfw/3.3.2/lib/libglfw.3.3.dylib; sourceTree = "<group>"; };
 		DF1EED2223F6442B001DD8D1 /* terrain-generator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "terrain-generator.entitlements"; sourceTree = "<group>"; };
+		DF1EED2423F66D01001DD8D1 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +64,7 @@
 			children = (
 				DF1EED2223F6442B001DD8D1 /* terrain-generator.entitlements */,
 				DF1EED0A23F6403D001DD8D1 /* main.cpp */,
+				DF1EED2423F66D01001DD8D1 /* .gitignore */,
 				DF1EED0823F6403D001DD8D1 /* Products */,
 				DF1EED1523F64255001DD8D1 /* camera.h */,
 				DF1EED1623F64255001DD8D1 /* glad.c */,

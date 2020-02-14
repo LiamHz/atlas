@@ -1,2 +1,4 @@
 *.entitlements
-*.pblist
+*.plist
+terrain-generator.xcodeproj/*
+!terrain-generator.xcodeproj/project.pbxproj

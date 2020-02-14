@@ -53,6 +53,7 @@ int main() {
     std::vector<int> indices;
     std::vector<float> noise_map;
     std::vector<float> vertices;
+    std::vector<float> normals;
 
     // Initialize GLFW and GLAD
     if (init() != 0)
@@ -64,17 +65,18 @@ int main() {
     indices = generate_indices(map_width, map_height);
     noise_map = generate_noise_map(map_width, map_height);
     vertices = generate_vertices(map_width, map_height, noise_map);
-    indices = generate_indices(map_width, map_height);
-
+    normals = generate_normals(map_width, map_height, indices, vertices);
+    
     // Create buffers and arrays
-    unsigned int VAO, VBO, EBO;
-    glGenBuffers(1, &VBO);
+    unsigned int VAO, VBO1, VBO2, EBO;
+    glGenBuffers(1, &VBO1);
+    glGenBuffers(1, &VBO2);
     glGenBuffers(1, &EBO);
     glGenVertexArrays(1, &VAO);
     
     // Bind vertices to VBO
     glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO1);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
     
     // Create element buffer
@@ -84,6 +86,14 @@ int main() {
     // Configure vertex position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    
+    // Bind vertices to VBO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
+    glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
+    
+    // Configure vertex normals attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
     
     // Lighting
     shader.use();
@@ -140,8 +150,45 @@ int main() {
     return 0;
 }
 
-std::vector<int> generate_noise_map(int width, int height) {
-    std::vector<int> noise_map;
+std::vector<float> generate_normals(int width, int height, std::vector<int> indices, std::vector<float> vertices) {
+    std::vector<int> idx;
+    std::vector<float> n;
+    std::vector<glm::vec3> p;
+    glm::vec3 normal;
+    
+    
+    // Get the vertices of each triangle in mesh
+    // For each group of indices
+    for (int i = 0; i < indices.size(); i += 3) {
+        
+        // Get the vertices (point) for each index
+        for (int j = 0; j < 3; j++) {
+            int q = indices[i+j]*3;
+            p.push_back(glm::vec3(vertices[q], vertices[q+1], vertices[q+2]));
+        }
+        
+        // Get vectors of two edges of triangle
+        glm::vec3 U = p[i+1] - p[i];
+        glm::vec3 V = p[i+2] - p[i];
+        
+        // Calculate normal
+        normal = glm::normalize(glm::cross(U, V));
+        n.push_back(normal.x);
+        n.push_back(normal.y);
+        n.push_back(normal.z);
+    }
+    
+    return n;
+}
+
+std::vector<float> generate_noise_map(int width, int height) {
+    std::vector<float> noise_map;
+    
+    int seed = 42;
+    double frequency = 15;
+    int octaves = 8;
+    
+    siv::PerlinNoise p(seed);
     
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++) {

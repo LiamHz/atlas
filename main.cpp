@@ -1,5 +1,6 @@
-#include <iostream>
 #include <cmath>
+#include <string>
+#include <iostream>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -15,12 +16,15 @@ const GLint WIDTH = 800, HEIGHT = 600;
 // Functions
 int init();
 void processInput(GLFWwindow *window);
-int setup_vertex_objects(unsigned int &VAO, unsigned int &VBO);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
+std::vector<int> generate_noise_map(int width, int height);
+std::vector<float> generate_vertices(int width, int height, std::vector<int> noise_map);
+std::vector<int> generate_indices(int width, int height);
+
 // Camera
-Camera camera(glm::vec3(0.0f, 0.0f,  3.0f));
+Camera camera(glm::vec3(0.0f, 3.0f, 20.0f));
 bool firstMouse = true;
 float lastX = WIDTH / 2;
 float lastY = HEIGHT / 2;
@@ -35,20 +39,47 @@ GLFWwindow *window;
 
 int main() {
     // Initalize variables
+    int map_width = 20;
+    int map_height = 10;
+    
     glm::mat4 view;
     glm::mat4 model;
     glm::mat4 projection;
     glm::vec3 lightPos;
     
+    std::vector<int> indices;
+    std::vector<int> noise_map;
+    std::vector<float> vertices;
+
     // Initialize GLFW and GLAD
     if (init() != 0)
         return -1;
     
     Shader shader("vshader.vs", "fshader.fs");
     
-    unsigned int VAO, VBO, lightVAO, lightVBO;
-    setup_vertex_objects(VAO, VBO);
-    setup_vertex_objects(lightVAO, lightVBO);
+    // Generate map
+    noise_map = generate_noise_map(map_width, map_height);
+    vertices = generate_vertices(map_width, map_height, noise_map);
+    indices = generate_indices(map_width, map_height);
+
+    // Create buffers and arrays
+    unsigned int VAO, VBO, EBO;
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+    glGenVertexArrays(1, &VAO);
+    
+    // Bind vertices to VAO and VBO
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+    
+    // Create element buffer
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices[0], GL_STATIC_DRAW);
+    
+    // Configure vertex position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
     
     // Lighting
     shader.use();
@@ -81,23 +112,13 @@ int main() {
         lightPos = glm::vec3(glm::sin(glfwGetTime()) * 10, 2.0, glm::cos(glfwGetTime()) * 10);
         shader.setVec3("u_lightPos", lightPos);
         
-        // Render light source
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, lightPos);
-        model = glm::scale(model, glm::vec3(0.5f));
-        shader.setMat4("u_model", model);
-        shader.setVec3("u_objectColor", glm::vec3(1.0, 1.0, 1.0));
-        
-        glBindVertexArray(lightVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        
-        // Render cube
+        // Render terrain
         model = glm::mat4(1.0f);
         shader.setMat4("u_model", model);
         shader.setVec3("u_objectColor", glm::vec3(0.2, 0.3, 0.6));
         
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDrawElements(GL_TRIANGLES, (int)indices.size(), GL_UNSIGNED_INT, 0);
         
         // Use double buffer
         // Only swap old frame with new when it is completed
@@ -106,76 +127,60 @@ int main() {
     }
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteVertexArrays(1, &lightVAO);
-    glDeleteBuffers(1, &lightVBO);
+    glDeleteBuffers(1, &EBO);
     
     glfwTerminate();
     
     return 0;
 }
 
-int setup_vertex_objects(unsigned int &VAO, unsigned int &VBO) {
-    // Define cube vertices
-    float vertices[] = {
-        // Postion          // Surface normals
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
-    };
+std::vector<int> generate_noise_map(int width, int height) {
+    std::vector<int> noise_map;
     
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++) {
+            noise_map.push_back(0);
+        }
     
-    // Bind vertices to VAO and VBO
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) * sizeof(float), vertices, GL_STATIC_DRAW);
+    return noise_map;
+}
+
+std::vector<float> generate_vertices(int width, int height, std::vector<int> noise_map) {
+    std::vector<float> v;
     
-    // Configure position and surface normal vertex attributes
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
+    for (int y = 0; y < height + 1; y++)
+        for (int x = 0; x < width; x++) {
+            v.push_back(x);
+            v.push_back(noise_map[x + y*width]);
+            v.push_back(y);
+        }
     
-    return 0;
+    return v;
+}
+
+std::vector<int> generate_indices(int width, int height) {
+    std::vector<int> indices;
+    
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++) {
+            int pos = x + y*width;
+            
+            if (x == width - 1 || y == height - 1) {
+                // Don't create indices for right or top edge
+                continue;
+            } else {
+                // Top left triangle of square
+                indices.push_back(pos);
+                indices.push_back(pos + width);
+                indices.push_back(pos + width + 1);
+                // Bottom right triangle of square
+                indices.push_back(pos);
+                indices.push_back(pos + 1);
+                indices.push_back(pos + 1 + width);
+            }
+        }
+
+    return indices;
 }
 
 // Initialize GLFW and GLAD
@@ -215,7 +220,7 @@ int init() {
     glViewport(0, 0, screenWidth, screenHeight);
     
     // Enable wireframe mode
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // Enable z-buffer
     glEnable(GL_DEPTH_TEST);

@@ -11,7 +11,7 @@ uniform vec3 u_viewPos;
 
 void main() {
     // Ambient lighting
-    float ambientStrength = 0.7;
+    float ambientStrength = 1.0;
     vec3 ambient = ambientStrength * u_lightColor;
     
     // Diffuse lighting
@@ -28,6 +28,6 @@ void main() {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
     vec3 specular = specularStrength * spec * u_lightColor;
     
-    vec3 result = (ambient + diffuse + specular) * u_objectColor;
+    vec3 result = (ambient) * u_objectColor;
     FragColor = vec4(result, 1.0);
 }

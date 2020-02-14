@@ -1,5 +1,6 @@
 #include <cmath>
 #include <string>
+#include <random>
 #include <iostream>
 
 #include <glad/glad.h>
@@ -10,8 +11,9 @@
 
 #include "shader.h"
 #include "camera.h"
+#include "perlin.h"
 
-const GLint WIDTH = 800, HEIGHT = 600;
+const GLint WIDTH = 1280, HEIGHT = 720;
 
 // Functions
 int init();
@@ -19,12 +21,13 @@ void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
-std::vector<int> generate_noise_map(int width, int height);
-std::vector<float> generate_vertices(int width, int height, std::vector<int> noise_map);
 std::vector<int> generate_indices(int width, int height);
+std::vector<float> generate_noise_map(int width, int height);
+std::vector<float> generate_vertices(int width, int height, std::vector<float> noise_map);
+std::vector<float> generate_normals(int width, int height, std::vector<int> indices, std::vector<float> vertices);
 
 // Camera
-Camera camera(glm::vec3(0.0f, 3.0f, 20.0f));
+Camera camera(glm::vec3(0.0f, 20.0f, 0.0f));
 bool firstMouse = true;
 float lastX = WIDTH / 2;
 float lastY = HEIGHT / 2;
@@ -39,8 +42,8 @@ GLFWwindow *window;
 
 int main() {
     // Initalize variables
-    int map_width = 20;
-    int map_height = 10;
+    int map_width = 128;
+    int map_height = 128;
     
     glm::mat4 view;
     glm::mat4 model;
@@ -48,7 +51,7 @@ int main() {
     glm::vec3 lightPos;
     
     std::vector<int> indices;
-    std::vector<int> noise_map;
+    std::vector<float> noise_map;
     std::vector<float> vertices;
 
     // Initialize GLFW and GLAD
@@ -58,6 +61,7 @@ int main() {
     Shader shader("vshader.vs", "fshader.fs");
     
     // Generate map
+    indices = generate_indices(map_width, map_height);
     noise_map = generate_noise_map(map_width, map_height);
     vertices = generate_vertices(map_width, map_height, noise_map);
     indices = generate_indices(map_width, map_height);
@@ -68,7 +72,7 @@ int main() {
     glGenBuffers(1, &EBO);
     glGenVertexArrays(1, &VAO);
     
-    // Bind vertices to VAO and VBO
+    // Bind vertices to VBO
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
@@ -93,7 +97,7 @@ int main() {
         
         processInput(window);
         
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Activate shader
@@ -114,6 +118,7 @@ int main() {
         
         // Render terrain
         model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-map_width / 2.0, 0.0, -map_height / 2.0));
         shader.setMat4("u_model", model);
         shader.setVec3("u_objectColor", glm::vec3(0.2, 0.3, 0.6));
         
@@ -126,7 +131,8 @@ int main() {
         glfwSwapBuffers(window);
     }
     glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &VBO1);
+    glDeleteBuffers(1, &VBO2);
     glDeleteBuffers(1, &EBO);
     
     glfwTerminate();
@@ -139,13 +145,16 @@ std::vector<int> generate_noise_map(int width, int height) {
     
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++) {
-            noise_map.push_back(0);
+            noise_map.push_back(p.octaveNoise0_1(x / frequency, y / frequency, octaves)*10);
         }
+    
+    for (int i = 0; i < noise_map.size(); i++)
+        std::cout << noise_map[i] << std::endl;
     
     return noise_map;
 }
 
-std::vector<float> generate_vertices(int width, int height, std::vector<int> noise_map) {
+std::vector<float> generate_vertices(int width, int height, std::vector<float> noise_map) {
     std::vector<float> v;
     
     for (int y = 0; y < height + 1; y++)
@@ -174,8 +183,8 @@ std::vector<int> generate_indices(int width, int height) {
                 indices.push_back(pos + width);
                 indices.push_back(pos + width + 1);
                 // Bottom right triangle of square
-                indices.push_back(pos);
                 indices.push_back(pos + 1);
+                indices.push_back(pos);
                 indices.push_back(pos + 1 + width);
             }
         }
@@ -220,7 +229,7 @@ int init() {
     glViewport(0, 0, screenWidth, screenHeight);
     
     // Enable wireframe mode
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // Enable z-buffer
     glEnable(GL_DEPTH_TEST);

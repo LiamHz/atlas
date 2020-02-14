@@ -20,11 +20,14 @@ int init();
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void render(const unsigned int &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &map_width, int &map_height, int &nIndices);
 
 std::vector<int> generate_indices(int width, int height);
 std::vector<float> generate_noise_map(int width, int height);
 std::vector<float> generate_vertices(int width, int height, std::vector<float> noise_map);
 std::vector<float> generate_normals(int width, int height, std::vector<int> indices, std::vector<float> vertices);
+
+void create_buffers_and_arrays(unsigned int &VAO, unsigned int &VBO1, unsigned int &VBO2, unsigned int &EBO, std::vector<float> &vertices, std::vector<int> &indices, std::vector<float> &normals);
 
 // Camera
 Camera camera(glm::vec3(0.0f, 20.0f, 0.0f));
@@ -69,6 +72,30 @@ int main() {
     
     // Create buffers and arrays
     unsigned int VAO, VBO1, VBO2, EBO;
+    create_buffers_and_arrays(VAO, VBO1, VBO2, EBO, vertices, indices, normals);
+    
+    
+    // Lighting
+    shader.use();
+    shader.setVec3("u_lightColor", 1.0f, 1.0f, 1.0f);
+    
+    int nIndices = (int)indices.size();
+    
+    while (!glfwWindowShouldClose(window)) {
+        render(VAO, shader, view, model, projection, lightPos, map_width, map_height, nIndices);
+    }
+    
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO1);
+    glDeleteBuffers(1, &VBO2);
+    glDeleteBuffers(1, &EBO);
+    
+    glfwTerminate();
+    
+    return 0;
+}
+
+void create_buffers_and_arrays(unsigned int &VAO, unsigned int &VBO1, unsigned int &VBO2, unsigned int &EBO, std::vector<float> &vertices, std::vector<int> &indices, std::vector<float> &normals) {
     glGenBuffers(1, &VBO1);
     glGenBuffers(1, &VBO2);
     glGenBuffers(1, &EBO);
@@ -94,68 +121,55 @@ int main() {
     // Configure vertex normals attribute
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
+}
+
+void render(const unsigned int &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &map_width, int &map_height, int &nIndices) {
+    // Per-frame time logic
+    currentFrame = glfwGetTime();
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
     
-    // Lighting
+    processInput(window);
+    
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Activate shader
     shader.use();
-    shader.setVec3("u_lightColor", 1.0f, 1.0f, 1.0f);
-    
-    while (!glfwWindowShouldClose(window)) {
-        // Per-frame time logic
-        currentFrame = glfwGetTime();
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
-        
-        processInput(window);
-        
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Activate shader
-        shader.use();
-
-        // Set projection and view matrix
-        projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
-        shader.setMat4("u_projection", projection);
-        view = camera.GetViewMatrix();
-        shader.setMat4("u_view", view);
-        
-        // Set view position
-        shader.setVec3("u_viewPos", camera.Position);
-        
-        // Dynamic lighting
-        lightPos = glm::vec3(glm::sin(glfwGetTime()) * 10, 2.0, glm::cos(glfwGetTime()) * 10);
-        shader.setVec3("u_lightPos", lightPos);
-        
-        // Render terrain
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-map_width / 2.0, 0.0, -map_height / 2.0));
-        shader.setMat4("u_model", model);
-        shader.setVec3("u_objectColor", glm::vec3(0.2, 0.3, 0.6));
-        
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, (int)indices.size(), GL_UNSIGNED_INT, 0);
-        
-        // Use double buffer
-        // Only swap old frame with new when it is completed
-        glfwPollEvents();
-        glfwSwapBuffers(window);
-    }
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO1);
-    glDeleteBuffers(1, &VBO2);
-    glDeleteBuffers(1, &EBO);
+    // Set projection and view matrix
+    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+    shader.setMat4("u_projection", projection);
+    view = camera.GetViewMatrix();
+    shader.setMat4("u_view", view);
     
-    glfwTerminate();
+    // Set view position
+    shader.setVec3("u_viewPos", camera.Position);
     
-    return 0;
+    // Dynamic lighting
+    lightPos = glm::vec3(glm::sin(0.5*glfwGetTime()) * 100, 20.0, glm::cos(0.5*glfwGetTime()) * 100);
+    shader.setVec3("u_lightPos", lightPos);
+    
+    // Render terrain
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-map_width / 2.0, 0.0, -map_height / 2.0));
+    shader.setMat4("u_model", model);
+    shader.setVec3("u_objectColor", glm::vec3(0.2, 0.3, 0.6));
+    
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
+    
+    // Use double buffer
+    // Only swap old frame with new when it is completed
+    glfwPollEvents();
+    glfwSwapBuffers(window);
 }
 
 std::vector<float> generate_normals(int width, int height, std::vector<int> indices, std::vector<float> vertices) {
-    std::vector<int> idx;
-    std::vector<float> n;
-    std::vector<glm::vec3> p;
+    int pos;
     glm::vec3 normal;
-    
+    std::vector<float> normals;
+    std::vector<glm::vec3> verts;
     
     // Get the vertices of each triangle in mesh
     // For each group of indices
@@ -163,22 +177,22 @@ std::vector<float> generate_normals(int width, int height, std::vector<int> indi
         
         // Get the vertices (point) for each index
         for (int j = 0; j < 3; j++) {
-            int q = indices[i+j]*3;
-            p.push_back(glm::vec3(vertices[q], vertices[q+1], vertices[q+2]));
+            pos = indices[i+j]*3;
+            verts.push_back(glm::vec3(vertices[pos], vertices[pos+1], vertices[pos+2]));
         }
         
         // Get vectors of two edges of triangle
-        glm::vec3 U = p[i+1] - p[i];
-        glm::vec3 V = p[i+2] - p[i];
+        glm::vec3 U = verts[i+1] - verts[i];
+        glm::vec3 V = verts[i+2] - verts[i];
         
         // Calculate normal
         normal = glm::normalize(glm::cross(U, V));
-        n.push_back(normal.x);
-        n.push_back(normal.y);
-        n.push_back(normal.z);
+        normals.push_back(normal.x);
+        normals.push_back(normal.y);
+        normals.push_back(normal.z);
     }
     
-    return n;
+    return normals;
 }
 
 std::vector<float> generate_noise_map(int width, int height) {
@@ -194,9 +208,6 @@ std::vector<float> generate_noise_map(int width, int height) {
         for (int x = 0; x < width; x++) {
             noise_map.push_back(p.octaveNoise0_1(x / frequency, y / frequency, octaves)*10);
         }
-    
-    for (int i = 0; i < noise_map.size(); i++)
-        std::cout << noise_map[i] << std::endl;
     
     return noise_map;
 }
@@ -230,9 +241,9 @@ std::vector<int> generate_indices(int width, int height) {
                 indices.push_back(pos + width);
                 indices.push_back(pos + width + 1);
                 // Bottom right triangle of square
+                indices.push_back(pos + 1 + width);
                 indices.push_back(pos + 1);
                 indices.push_back(pos);
-                indices.push_back(pos + 1 + width);
             }
         }
 

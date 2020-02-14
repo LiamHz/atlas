@@ -34,60 +34,31 @@ namespace siv
 
     public:
 
-        explicit PerlinNoise(std::uint32_t seed = std::default_random_engine::default_seed)
-        {
+        explicit PerlinNoise(std::uint32_t seed = std::default_random_engine::default_seed) {
             reseed(seed);
         }
 
-//        template <class URNG, std::enable_if_t<!std::is_arithmetic<URNG>>* = nullptr>
-//        explicit PerlinNoise(URNG& urng)
-//        {
-//            reseed(urng);
-//        }
-
-        void reseed(std::uint32_t seed)
-        {
-            for (size_t i = 0; i < 256; ++i)
-            {
+        void reseed(std::uint32_t seed) {
+            for (size_t i = 0; i < 256; ++i) {
                 p[i] = static_cast<std::uint8_t>(i);
             }
 
             std::shuffle(std::begin(p), std::begin(p) + 256, std::default_random_engine(seed));
 
-            for (size_t i = 0; i < 256; ++i)
-            {
+            for (size_t i = 0; i < 256; ++i) {
                 p[256 + i] = p[i];
             }
         }
 
-//        template <class URNG, std::enable_if_t<!std::is_arithmetic_v<URNG>>* = nullptr>
-//        void reseed(URNG& urng)
-//        {
-//            for (size_t i = 0; i < 256; ++i)
-//            {
-//                p[i] = static_cast<std::uint8_t>(i);
-//            }
-//
-//            std::shuffle(std::begin(p), std::begin(p) + 256, urng);
-//
-//            for (size_t i = 0; i < 256; ++i)
-//            {
-//                p[256 + i] = p[i];
-//            }
-//        }
-
-        double noise(double x) const
-        {
+        double noise(double x) const {
             return noise(x, 0.0, 0.0);
         }
 
-        double noise(double x, double y) const
-        {
+        double noise(double x, double y) const {
             return noise(x, y, 0.0);
         }
 
-        double noise(double x, double y, double z) const
-        {
+        double noise(double x, double y, double z) const {
             const std::int32_t X = static_cast<std::int32_t>(std::floor(x)) & 255;
             const std::int32_t Y = static_cast<std::int32_t>(std::floor(y)) & 255;
             const std::int32_t Z = static_cast<std::int32_t>(std::floor(z)) & 255;
@@ -113,13 +84,11 @@ namespace siv
                 Grad(p[BB + 1], x - 1, y - 1, z - 1))));
         }
 
-        double octaveNoise(double x, std::int32_t octaves) const
-        {
+        double octaveNoise(double x, std::int32_t octaves) const {
             double result = 0.0;
             double amp = 1.0;
 
-            for (std::int32_t i = 0; i < octaves; ++i)
-            {
+            for (std::int32_t i = 0; i < octaves; ++i) {
                 result += noise(x) * amp;
                 x *= 2.0;
                 amp *= 0.5;
@@ -128,13 +97,11 @@ namespace siv
             return result;
         }
 
-        double octaveNoise(double x, double y, std::int32_t octaves) const
-        {
+        double octaveNoise(double x, double y, std::int32_t octaves) const {
             double result = 0.0;
             double amp = 1.0;
 
-            for (std::int32_t i = 0; i < octaves; ++i)
-            {
+            for (std::int32_t i = 0; i < octaves; ++i) {
                 result += noise(x, y) * amp;
                 x *= 2.0;
                 y *= 2.0;
@@ -144,13 +111,11 @@ namespace siv
             return result;
         }
 
-        double octaveNoise(double x, double y, double z, std::int32_t octaves) const
-        {
+        double octaveNoise(double x, double y, double z, std::int32_t octaves) const {
             double result = 0.0;
             double amp = 1.0;
 
-            for (std::int32_t i = 0; i < octaves; ++i)
-            {
+            for (std::int32_t i = 0; i < octaves; ++i) {
                 result += noise(x, y, z) * amp;
                 x *= 2.0;
                 y *= 2.0;
@@ -161,23 +126,19 @@ namespace siv
             return result;
         }
 
-        double noise0_1(double x) const
-        {
+        double noise0_1(double x) const {
             return noise(x) * 0.5 + 0.5;
         }
 
-        double noise0_1(double x, double y) const
-        {
+        double noise0_1(double x, double y) const {
             return noise(x, y) * 0.5 + 0.5;
         }
 
-        double noise0_1(double x, double y, double z) const
-        {
+        double noise0_1(double x, double y, double z) const {
             return noise(x, y, z) * 0.5 + 0.5;
         }
 
-        double octaveNoise0_1(double x, std::int32_t octaves) const
-        {
+        double octaveNoise0_1(double x, std::int32_t octaves) const {
             return octaveNoise(x, octaves) * 0.5 + 0.5;
         }
 

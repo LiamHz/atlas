@@ -18,7 +18,7 @@ const GLint WIDTH = 1920, HEIGHT = 1080;
 
 // Functions
 int init();
-void processInput(GLFWwindow *window);
+void processInput(GLFWwindow *window, Shader shader);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &map_width, int &map_height, int &nIndices);
@@ -136,7 +136,7 @@ void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
     
-    processInput(window);
+    processInput(window, shader);
     
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -336,9 +336,6 @@ int init() {
     }
 
     glViewport(0, 0, screenWidth, screenHeight);
-    
-    // Enable wireframe mode
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // Enable z-buffer
     glEnable(GL_DEPTH_TEST);
@@ -349,9 +346,25 @@ int init() {
     return 0;
 }
 
-void processInput(GLFWwindow *window) {
+void processInput(GLFWwindow *window, Shader shader) {
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+    
+    // Enable wireframe mode
+    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    
+    // Enable flat mode
+    if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
+        shader.use();
+        shader.setBool("isFlat", false);
+    }
+    if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
+        shader.use();
+        shader.setBool("isFlat", true);
+    }
     
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);

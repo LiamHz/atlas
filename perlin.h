@@ -6,12 +6,9 @@
 # include <iterator>
 # include <type_traits>
 
-namespace siv
-{
-    class PerlinNoise
-    {
+namespace siv {
+    class PerlinNoise {
     private:
-
         std::uint8_t p[512];
 
         static double Fade(double t) noexcept {
@@ -83,7 +80,7 @@ namespace siv
 
         double octaveNoise(double x, std::int32_t octaves) const {
             double result = 0.0;
-            double amp = 1.0;
+            double amp = 10.0;
 
             for (std::int32_t i = 0; i < octaves; ++i) {
                 result += noise(x) * amp;
@@ -96,7 +93,7 @@ namespace siv
 
         double octaveNoise(double x, double y, std::int32_t octaves) const {
             double result = 0.0;
-            double amp = 1.0;
+            double amp = 10.0;
 
             for (std::int32_t i = 0; i < octaves; ++i) {
                 result += noise(x, y) * amp;
@@ -110,7 +107,7 @@ namespace siv
 
         double octaveNoise(double x, double y, double z, std::int32_t octaves) const {
             double result = 0.0;
-            double amp = 1.0;
+            double amp = 10.0;
 
             for (std::int32_t i = 0; i < octaves; ++i) {
                 result += noise(x, y, z) * amp;
@@ -139,13 +136,11 @@ namespace siv
             return octaveNoise(x, octaves) * 0.5 + 0.5;
         }
 
-        double octaveNoise0_1(double x, double y, std::int32_t octaves) const
-        {
+        double octaveNoise0_1(double x, double y, std::int32_t octaves) const {
             return octaveNoise(x, y, octaves) * 0.5 + 0.5;
         }
 
-        double octaveNoise0_1(double x, double y, double z, std::int32_t octaves) const
-        {
+        double octaveNoise0_1(double x, double y, double z, std::int32_t octaves) const {
             return octaveNoise(x, y, z, octaves) * 0.5 + 0.5;
         }
     };

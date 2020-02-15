@@ -36,10 +36,6 @@ vec3 calculateLighting(vec3 Normal, vec3 FragPos) {
     return (ambient + diffuse + specular);
 }
 
-vec3 get_color(int r, int g, int b) {
-    return vec3(r/255.0, g/255.0, b/255.0);
-}
-
 void main() {
     vec3 FragPos = vec3(u_model * vec4(aPos, 1.0));
     vec3 Normal = mat3(transpose(inverse(u_model))) * aNormal;

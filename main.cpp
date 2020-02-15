@@ -25,9 +25,9 @@ void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model
 
 std::vector<int> generate_indices(int width, int height);
 std::vector<float> generate_noise_map(int width, int height);
-std::vector<float> generate_vertices(int width, int height, std::vector<float> noise_map);
-std::vector<float> generate_normals(int width, int height, std::vector<int> indices, std::vector<float> vertices);
-std::vector<float> generate_colors(int width, int height, std::vector<float> vertices);
+std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map);
+std::vector<float> generate_normals(int width, int height, const std::vector<int> &indices, const std::vector<float> &vertices);
+std::vector<float> generate_colors(const std::vector<float> &vertices);
 
 // Camera
 Camera camera(glm::vec3(0.0f, 20.0f, 0.0f));
@@ -45,8 +45,8 @@ GLFWwindow *window;
 
 int main() {
     // Initalize variables
-    int map_width = 128;
-    int map_height = 128;
+    int map_width = 127;
+    int map_height = 127;
     
     glm::mat4 view;
     glm::mat4 model;
@@ -70,11 +70,7 @@ int main() {
     noise_map = generate_noise_map(map_width, map_height);
     vertices = generate_vertices(map_width, map_height, noise_map);
     normals = generate_normals(map_width, map_height, indices, vertices);
-    colors = generate_colors(map_width, map_height, vertices);
-    
-    std::cout << vertices.size() << std::endl;
-    std::cout << normals.size() << std::endl;
-    std::cout << colors.size() << std::endl;
+    colors = generate_colors(vertices);
     
     // Create buffers and arrays
     GLuint VAO, VBO[3], EBO;
@@ -114,6 +110,9 @@ int main() {
     // Lighting
     shader.use();
     shader.setVec3("u_lightColor", 1.0f, 0.8f, 0.8f);
+    
+    // Default to flat mode
+    shader.setBool("isFlat", true);
     
     int nIndices = (int)indices.size();
     
@@ -176,16 +175,21 @@ glm::vec3 get_color(int r, int g, int b) {
     return glm::vec3(r/255.0, g/255.0, b/255.0);
 }
 
-std::vector<float> generate_colors(int width, int height, std::vector<float> vertices) {
+std::vector<float> generate_colors(const std::vector<float> &vertices) {
     std::vector<float> colors;
     std::vector<glm::vec3> biomeColors;
     glm::vec3 color;
-
-    float max_height = 0;
     
+    // Spread is the amount of alitude range colors are spread over
+    // This accounts for the long tails of perlin noise
+    float spread = 0.45f;
+    float halfSpread = spread / 2;
+    
+    // Amplitude is the max height of vertices
+    float amplitude = 0;
     for (int y_val = 1; y_val < vertices.size(); y_val += 3)
-        if (vertices[y_val] > max_height)
-            max_height = vertices[y_val];
+        if (vertices[y_val] > amplitude)
+            amplitude = vertices[y_val];
     
     biomeColors.push_back(get_color(201, 178, 99));
     biomeColors.push_back(get_color(135, 184, 82));
@@ -193,29 +197,28 @@ std::vector<float> generate_colors(int width, int height, std::vector<float> ver
     biomeColors.push_back(get_color(120, 120, 120));
     biomeColors.push_back(get_color(200, 200, 210));
 
-    float q = max_height / biomeColors.size() + 1;
-    std::cout << q << std::endl;
-    
-    int max_n = 0;
+    float part = 1.0f / (biomeColors.size() - 1);
 
     // Iterate through vertex y values
     for (int y_val = 1; y_val < vertices.size(); y_val += 3) {
-        float nBiome = vertices[y_val] / q;
-        float dy = fmod(vertices[y_val], q) / q;
+        float height = vertices[y_val];
+        float value = (height + amplitude) / (amplitude * 2);
+        
+        value = std::max(0.0f, std::min((value - halfSpread) * (1 / spread), 0.9999f));
+        int firstBiome = (int)floor(value / part);
+        float blend = (value - (firstBiome * part)) / part;
 
         // Lerp between the two biome colors
-        color = dy * biomeColors[nBiome] + (1 - dy) * biomeColors[nBiome+1];
+        color = (1 - blend) * biomeColors[firstBiome] + blend * biomeColors[firstBiome+1];
         colors.push_back(color.r);
         colors.push_back(color.g);
         colors.push_back(color.b);
     }
     
-    std::cout << max_n << std::endl;
-    
     return colors;
 }
 
-std::vector<float> generate_normals(int width, int height, std::vector<int> indices, std::vector<float> vertices) {
+std::vector<float> generate_normals(int width, int height, const std::vector<int> &indices, const std::vector<float> &vertices) {
     int pos;
     glm::vec3 normal;
     std::vector<float> normals;
@@ -248,21 +251,21 @@ std::vector<float> generate_normals(int width, int height, std::vector<int> indi
 std::vector<float> generate_noise_map(int width, int height) {
     std::vector<float> noise_map;
     
-    int seed = 42;
-    double frequency = 16;
+    int seed = 27;
     int octaves = 3;
+    double frequency = 12;
     
     siv::PerlinNoise p(seed);
     
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++) {
-            noise_map.push_back(p.octaveNoise0_1(x / frequency, y / frequency, octaves)*12);
+            noise_map.push_back(p.octaveNoise0_1(x / frequency, y / frequency, octaves));
         }
     
     return noise_map;
 }
 
-std::vector<float> generate_vertices(int width, int height, std::vector<float> noise_map) {
+std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map) {
     std::vector<float> v;
     float scale = 1.0;
     
@@ -288,12 +291,12 @@ std::vector<int> generate_indices(int width, int height) {
                 continue;
             } else {
                 // Top left triangle of square
-                indices.push_back(pos);
                 indices.push_back(pos + width);
+                indices.push_back(pos);
                 indices.push_back(pos + width + 1);
                 // Bottom right triangle of square
-                indices.push_back(pos + 1 + width);
                 indices.push_back(pos + 1);
+                indices.push_back(pos + 1 + width);
                 indices.push_back(pos);
             }
         }
@@ -351,19 +354,19 @@ void processInput(GLFWwindow *window, Shader shader) {
         glfwSetWindowShouldClose(window, true);
     
     // Enable wireframe mode
-    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     
     // Enable flat mode
     if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
         shader.use();
         shader.setBool("isFlat", false);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
     if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
         shader.use();
         shader.setBool("isFlat", true);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
     
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)

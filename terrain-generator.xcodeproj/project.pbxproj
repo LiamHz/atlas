@@ -44,6 +44,8 @@
 		DF1EED2223F6442B001DD8D1 /* terrain-generator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "terrain-generator.entitlements"; sourceTree = "<group>"; };
 		DF1EED2423F66D01001DD8D1 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		DF1EED2523F71C40001DD8D1 /* perlin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = perlin.h; sourceTree = "<group>"; };
+		DF1EED2623F78526001DD8D1 /* demo.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = demo.gif; sourceTree = "<group>"; };
+		DF1EED2723F7854E001DD8D1 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +75,8 @@
 				DF1EED1423F64255001DD8D1 /* fshader.fs */,
 				DF1EED1123F64255001DD8D1 /* shader.h */,
 				DF1EED1223F64255001DD8D1 /* vshader.vs */,
+				DF1EED2623F78526001DD8D1 /* demo.gif */,
+				DF1EED2723F7854E001DD8D1 /* README.md */,
 				DF1EED1B23F64366001DD8D1 /* Frameworks */,
 			);
 			sourceTree = "<group>";

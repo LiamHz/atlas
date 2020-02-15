@@ -2,6 +2,7 @@
 #include <string>
 #include <random>
 #include <iostream>
+#include <math.h>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -13,21 +14,20 @@
 #include "camera.h"
 #include "perlin.h"
 
-const GLint WIDTH = 1280, HEIGHT = 720;
+const GLint WIDTH = 1920, HEIGHT = 1080;
 
 // Functions
 int init();
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void render(const unsigned int &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &map_width, int &map_height, int &nIndices);
+void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &map_width, int &map_height, int &nIndices);
 
 std::vector<int> generate_indices(int width, int height);
 std::vector<float> generate_noise_map(int width, int height);
 std::vector<float> generate_vertices(int width, int height, std::vector<float> noise_map);
 std::vector<float> generate_normals(int width, int height, std::vector<int> indices, std::vector<float> vertices);
-
-void create_buffers_and_arrays(unsigned int &VAO, unsigned int &VBO1, unsigned int &VBO2, unsigned int &EBO, std::vector<float> &vertices, std::vector<int> &indices, std::vector<float> &normals);
+std::vector<float> generate_colors(int width, int height, std::vector<float> vertices);
 
 // Camera
 Camera camera(glm::vec3(0.0f, 20.0f, 0.0f));
@@ -57,6 +57,7 @@ int main() {
     std::vector<float> noise_map;
     std::vector<float> vertices;
     std::vector<float> normals;
+    std::vector<float> colors;
 
     // Initialize GLFW and GLAD
     if (init() != 0)
@@ -69,41 +70,21 @@ int main() {
     noise_map = generate_noise_map(map_width, map_height);
     vertices = generate_vertices(map_width, map_height, noise_map);
     normals = generate_normals(map_width, map_height, indices, vertices);
+    colors = generate_colors(map_width, map_height, vertices);
+    
+    std::cout << vertices.size() << std::endl;
+    std::cout << normals.size() << std::endl;
+    std::cout << colors.size() << std::endl;
     
     // Create buffers and arrays
-    unsigned int VAO, VBO1, VBO2, EBO;
-    create_buffers_and_arrays(VAO, VBO1, VBO2, EBO, vertices, indices, normals);
-    
-    
-    // Lighting
-    shader.use();
-    shader.setVec3("u_lightColor", 1.0f, 1.0f, 1.0f);
-    
-    int nIndices = (int)indices.size();
-    
-    while (!glfwWindowShouldClose(window)) {
-        render(VAO, shader, view, model, projection, lightPos, map_width, map_height, nIndices);
-    }
-    
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO1);
-    glDeleteBuffers(1, &VBO2);
-    glDeleteBuffers(1, &EBO);
-    
-    glfwTerminate();
-    
-    return 0;
-}
-
-void create_buffers_and_arrays(unsigned int &VAO, unsigned int &VBO1, unsigned int &VBO2, unsigned int &EBO, std::vector<float> &vertices, std::vector<int> &indices, std::vector<float> &normals) {
-    glGenBuffers(1, &VBO1);
-    glGenBuffers(1, &VBO2);
+    GLuint VAO, VBO[3], EBO;
+    glGenBuffers(3, VBO);
     glGenBuffers(1, &EBO);
     glGenVertexArrays(1, &VAO);
     
     // Bind vertices to VBO
     glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO1);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
     
     // Create element buffer
@@ -115,15 +96,41 @@ void create_buffers_and_arrays(unsigned int &VAO, unsigned int &VBO1, unsigned i
     glEnableVertexAttribArray(0);
     
     // Bind vertices to VBO
-    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
     glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
     
     // Configure vertex normals attribute
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
+    
+    // Bind vertices to VBO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
+    glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(float), &colors[0], GL_STATIC_DRAW);
+    
+    // Configure vertex colors attribute
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(2);
+    
+    // Lighting
+    shader.use();
+    shader.setVec3("u_lightColor", 1.0f, 0.8f, 0.8f);
+    
+    int nIndices = (int)indices.size();
+    
+    while (!glfwWindowShouldClose(window)) {
+        render(VAO, shader, view, model, projection, lightPos, map_width, map_height, nIndices);
+    }
+    
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(3, VBO);
+    glDeleteBuffers(1, &EBO);
+    
+    glfwTerminate();
+    
+    return 0;
 }
 
-void render(const unsigned int &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &map_width, int &map_height, int &nIndices) {
+void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &map_width, int &map_height, int &nIndices) {
     // Per-frame time logic
     currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
@@ -165,6 +172,49 @@ void render(const unsigned int &VAO, Shader &shader, glm::mat4 &view, glm::mat4 
     glfwSwapBuffers(window);
 }
 
+glm::vec3 get_color(int r, int g, int b) {
+    return glm::vec3(r/255.0, g/255.0, b/255.0);
+}
+
+std::vector<float> generate_colors(int width, int height, std::vector<float> vertices) {
+    std::vector<float> colors;
+    std::vector<glm::vec3> biomeColors;
+    glm::vec3 color;
+
+    float max_height = 0;
+    
+    for (int y_val = 1; y_val < vertices.size(); y_val += 3)
+        if (vertices[y_val] > max_height)
+            max_height = vertices[y_val];
+    
+    biomeColors.push_back(get_color(201, 178, 99));
+    biomeColors.push_back(get_color(135, 184, 82));
+    biomeColors.push_back(get_color(80, 171, 93));
+    biomeColors.push_back(get_color(120, 120, 120));
+    biomeColors.push_back(get_color(200, 200, 210));
+
+    float q = max_height / biomeColors.size() + 1;
+    std::cout << q << std::endl;
+    
+    int max_n = 0;
+
+    // Iterate through vertex y values
+    for (int y_val = 1; y_val < vertices.size(); y_val += 3) {
+        float nBiome = vertices[y_val] / q;
+        float dy = fmod(vertices[y_val], q) / q;
+
+        // Lerp between the two biome colors
+        color = dy * biomeColors[nBiome] + (1 - dy) * biomeColors[nBiome+1];
+        colors.push_back(color.r);
+        colors.push_back(color.g);
+        colors.push_back(color.b);
+    }
+    
+    std::cout << max_n << std::endl;
+    
+    return colors;
+}
+
 std::vector<float> generate_normals(int width, int height, std::vector<int> indices, std::vector<float> vertices) {
     int pos;
     glm::vec3 normal;
@@ -199,14 +249,14 @@ std::vector<float> generate_noise_map(int width, int height) {
     std::vector<float> noise_map;
     
     int seed = 42;
-    double frequency = 15;
-    int octaves = 8;
+    double frequency = 16;
+    int octaves = 3;
     
     siv::PerlinNoise p(seed);
     
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++) {
-            noise_map.push_back(p.octaveNoise0_1(x / frequency, y / frequency, octaves)*10);
+            noise_map.push_back(p.octaveNoise0_1(x / frequency, y / frequency, octaves)*12);
         }
     
     return noise_map;
@@ -214,12 +264,13 @@ std::vector<float> generate_noise_map(int width, int height) {
 
 std::vector<float> generate_vertices(int width, int height, std::vector<float> noise_map) {
     std::vector<float> v;
+    float scale = 1.0;
     
     for (int y = 0; y < height + 1; y++)
         for (int x = 0; x < width; x++) {
-            v.push_back(x);
+            v.push_back(x*scale);
             v.push_back(noise_map[x + y*width]);
-            v.push_back(y);
+            v.push_back(y*scale);
         }
     
     return v;
@@ -287,7 +338,7 @@ int init() {
     glViewport(0, 0, screenWidth, screenHeight);
     
     // Enable wireframe mode
-//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // Enable z-buffer
     glEnable(GL_DEPTH_TEST);

@@ -14,18 +14,15 @@ namespace siv
 
         std::uint8_t p[512];
 
-        static double Fade(double t) noexcept
-        {
+        static double Fade(double t) noexcept {
             return t * t * t * (t * (t * 6 - 15) + 10);
         }
 
-        static double Lerp(double t, double a, double b) noexcept
-        {
+        static double Lerp(double t, double a, double b) noexcept {
             return a + t * (b - a);
         }
 
-        static double Grad(std::uint8_t hash, double x, double y, double z) noexcept
-        {
+        static double Grad(std::uint8_t hash, double x, double y, double z) noexcept {
             const std::uint8_t h = hash & 15;
             const double u = h < 8 ? x : y;
             const double v = h < 4 ? y : h == 12 || h == 14 ? x : z;

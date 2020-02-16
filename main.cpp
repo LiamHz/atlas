@@ -26,9 +26,9 @@ void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model
 
 std::vector<int> generate_indices(int width, int height);
 std::vector<float> generate_noise_map(int height, int width, float scale, int octaves, float persistence, float lacunarity);
-std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map, float scale);
+std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map, float meshHeight);
 std::vector<float> generate_normals(int width, int height, const std::vector<int> &indices, const std::vector<float> &vertices);
-std::vector<float> generate_colors(const std::vector<float> &vertices, float scale);
+std::vector<float> generate_colors(const std::vector<float> &vertices, float meshHeight);
 
 // Camera
 Camera camera(glm::vec3(0.0f, 20.0f, 0.0f));
@@ -43,7 +43,7 @@ float currentFrame;
 
 // Misc globals
 GLFWwindow *window;
-float WATER_HEIGHT = 0.4;
+float WATER_HEIGHT = 0.3;
 
 int main() {
     // Initalize variables
@@ -75,17 +75,18 @@ int main() {
     shader.setBool("isFlat", true);
     
     // Noise params
-    int octaves = 3;
-    float scale = 20;
-    float persistence = 0.5;
+    int octaves = 5;
+    float meshHeight = 15;  // Horizontal scaling
+    float noiseScale = 50;  // Vertical scaling
+    float persistence = 0.45;
     float lacunarity = 2;
     
     // Generate map
     indices = generate_indices(map_width, map_height);
-    noise_map = generate_noise_map(map_height, map_width, scale, octaves, persistence, lacunarity);
-    vertices = generate_vertices(map_width, map_height, noise_map, scale);
+    noise_map = generate_noise_map(map_height, map_width, noiseScale, octaves, persistence, lacunarity);
+    vertices = generate_vertices(map_width, map_height, noise_map, meshHeight);
     normals = generate_normals(map_width, map_height, indices, vertices);
-    colors = generate_colors(vertices, scale);
+    colors = generate_colors(vertices, meshHeight);
     
     int nIndices = (int)indices.size();
     
@@ -223,7 +224,7 @@ std::vector<float> generate_noise_map(int height, int width, float scale, int oc
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             // Inverse lerp and scale values to range from 0 to 1
-            normalizedNoiseValues.push_back((noiseValues[x + y*width] / (maxNoiseHeight - minNoiseHeight) + 1) / 2 * scale);
+            normalizedNoiseValues.push_back((noiseValues[x + y*width] / (maxNoiseHeight - minNoiseHeight) + 1) / 2);
         }
     }
 
@@ -239,33 +240,27 @@ struct terrainColor {
     glm::vec3 color;
 };
 
-std::vector<float> generate_colors(const std::vector<float> &vertices, float scale) {
+std::vector<float> generate_colors(const std::vector<float> &vertices, float meshHeight) {
     std::vector<float> colors;
     std::vector<terrainColor> biomeColors;
     glm::vec3 color;
     
     // NOTE: Terrain color height is a value between 0 and 1
-    biomeColors.push_back(terrainColor(WATER_HEIGHT, get_color(82, 121, 211)));
-    biomeColors.push_back(terrainColor(0.45, get_color(201, 223, 164)));
-    biomeColors.push_back(terrainColor(0.7, get_color(99, 167, 68)));
-    biomeColors.push_back(terrainColor(0.85, get_color(72, 68, 75)));
-    biomeColors.push_back(terrainColor(1.0, get_color(255, 255, 255)));
-
-    // Spread is the amount of alitude range colors are spread over
-    // This accounts for the long tails of perlin noise
-    float spread = 0.5f;
-    for (int i = 0; i < biomeColors.size(); i++) {
-        float distFromCenter = 0.5 - biomeColors[i].height;
-        float scaledDistFromCenter = 0.5 - distFromCenter * spread;
-        biomeColors[i].height = scaledDistFromCenter;
-    }
+    biomeColors.push_back(terrainColor(WATER_HEIGHT,        get_color(60,  95, 190)));   // Deep water
+    biomeColors.push_back(terrainColor(WATER_HEIGHT * 1.33, get_color(60, 100, 190)));  // Shallow water
+    biomeColors.push_back(terrainColor(0.45, get_color(210, 215, 130)));                // Sand
+    biomeColors.push_back(terrainColor(0.55, get_color( 95, 165,  30)));                // Grass 1
+    biomeColors.push_back(terrainColor(0.60, get_color( 65, 115,  20)));                // Grass 2
+    biomeColors.push_back(terrainColor(0.70, get_color( 90,  65,  60)));                // Rock 1
+    biomeColors.push_back(terrainColor(0.90, get_color( 75,  60,  55)));                // Rock 2
+    biomeColors.push_back(terrainColor(1.00, get_color(255, 255, 255)));                // Snow
     
     // Determine which color to assign each vertex by its y-coord
     // Iterate through vertex y values
     for (int i = 1; i < vertices.size(); i += 3) {
         for (int j = 0; j < biomeColors.size(); j++) {
-            // NOTE: The max height of a vertex is "scale"
-            if (vertices[i] <= biomeColors[j].height * scale) {
+            // NOTE: The max height of a vertex is "meshHeight"
+            if (vertices[i] <= biomeColors[j].height * meshHeight) {
                 color = biomeColors[j].color;
                 break;
             }
@@ -308,14 +303,18 @@ std::vector<float> generate_normals(int width, int height, const std::vector<int
     return normals;
 }
 
-std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map, float scale) {
+std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map, float meshHeight) {
     std::vector<float> v;
     
     for (int y = 0; y < height + 1; y++)
         for (int x = 0; x < width; x++) {
             v.push_back(x);
+            // Raising noise to a power creates an easing function
+            // Multiplying easedNoise shifts its distribution
+            float easedNoise = std::pow(noise_map[x + y*width], 3) * 3;
+            // Scale noise to match meshHeight
             // Pervent vertex height from being below WATER_HEIGHT
-            v.push_back(std::fmax(noise_map[x + y*width], WATER_HEIGHT * scale));
+            v.push_back(std::fmax(easedNoise * meshHeight, WATER_HEIGHT * meshHeight));
             v.push_back(y);
         }
     

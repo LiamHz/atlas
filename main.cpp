@@ -3,6 +3,7 @@
 #include <random>
 #include <iostream>
 #include <math.h>
+#include <cstdlib>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -24,10 +25,10 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &map_width, int &map_height, int &nIndices);
 
 std::vector<int> generate_indices(int width, int height);
-std::vector<float> generate_noise_map(int width, int height);
-std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map);
+std::vector<float> generate_noise_map(int height, int width, float scale, int octaves, float persistence, float lacunarity);
+std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map, float scale);
 std::vector<float> generate_normals(int width, int height, const std::vector<int> &indices, const std::vector<float> &vertices);
-std::vector<float> generate_colors(const std::vector<float> &vertices);
+std::vector<float> generate_colors(const std::vector<float> &vertices, float scale);
 
 // Camera
 Camera camera(glm::vec3(0.0f, 20.0f, 0.0f));
@@ -42,6 +43,7 @@ float currentFrame;
 
 // Misc globals
 GLFWwindow *window;
+float WATER_HEIGHT = 0.4;
 
 int main() {
     // Initalize variables
@@ -65,12 +67,27 @@ int main() {
     
     Shader shader("vshader.vs", "fshader.fs");
     
+    // Lighting
+    shader.use();
+    shader.setVec3("u_lightColor", 1.0f, 1.0f, 1.0f);
+    
+    // Default to flat mode
+    shader.setBool("isFlat", true);
+    
+    // Noise params
+    int octaves = 3;
+    float scale = 20;
+    float persistence = 0.5;
+    float lacunarity = 2;
+    
     // Generate map
     indices = generate_indices(map_width, map_height);
-    noise_map = generate_noise_map(map_width, map_height);
-    vertices = generate_vertices(map_width, map_height, noise_map);
+    noise_map = generate_noise_map(map_height, map_width, scale, octaves, persistence, lacunarity);
+    vertices = generate_vertices(map_width, map_height, noise_map, scale);
     normals = generate_normals(map_width, map_height, indices, vertices);
-    colors = generate_colors(vertices);
+    colors = generate_colors(vertices, scale);
+    
+    int nIndices = (int)indices.size();
     
     // Create buffers and arrays
     GLuint VAO, VBO[3], EBO;
@@ -106,15 +123,6 @@ int main() {
     // Configure vertex colors attribute
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(2);
-    
-    // Lighting
-    shader.use();
-    shader.setVec3("u_lightColor", 1.0f, 0.8f, 0.8f);
-    
-    // Default to flat mode
-    shader.setBool("isFlat", true);
-    
-    int nIndices = (int)indices.size();
     
     while (!glfwWindowShouldClose(window)) {
         render(VAO, shader, view, model, projection, lightPos, map_width, map_height, nIndices);
@@ -175,41 +183,93 @@ glm::vec3 get_color(int r, int g, int b) {
     return glm::vec3(r/255.0, g/255.0, b/255.0);
 }
 
-std::vector<float> generate_colors(const std::vector<float> &vertices) {
+std::vector<float> generate_noise_map(int height, int width, float scale, int octaves, float persistence, float lacunarity) {
+    std::vector<float> noiseValues;
+    std::vector<float> normalizedNoiseValues;
+    std::vector<int> p = get_permutation_vector();
+    
+    float minNoiseHeight =  1000;
+    float maxNoiseHeight = -1000;
+    
+    if (scale <= 0)
+        scale = 0.0001f;
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            float amp  = 1;
+            float freq = 1;
+            float noiseHeight = 0;
+            for (int i = 0; i < octaves; i++) {
+                float xSample = x / scale * freq;
+                float ySample = y / scale * freq;
+                float perlinValue = perlin_noise(xSample, ySample, p);
+                noiseHeight += perlinValue * amp;
+                
+                // Lacunarity  --> Increase in frequency of octaves
+                // Persistence --> Decrease in amplitude of octaves
+                amp  *= persistence;
+                freq *= lacunarity;
+            }
+            
+            if (noiseHeight > maxNoiseHeight)
+                maxNoiseHeight = noiseHeight;
+            else if (noiseHeight < minNoiseHeight)
+                minNoiseHeight = noiseHeight;
+            
+            noiseValues.push_back(noiseHeight);
+        }
+    }
+    
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            // Inverse lerp and scale values to range from 0 to 1
+            normalizedNoiseValues.push_back((noiseValues[x + y*width] / (maxNoiseHeight - minNoiseHeight) + 1) / 2 * scale);
+        }
+    }
+
+    return normalizedNoiseValues;
+}
+
+struct terrainColor {
+    terrainColor(float _height, glm::vec3 _color) {
+        height = _height;
+        color = _color;
+    };
+    float height;
+    glm::vec3 color;
+};
+
+std::vector<float> generate_colors(const std::vector<float> &vertices, float scale) {
     std::vector<float> colors;
-    std::vector<glm::vec3> biomeColors;
+    std::vector<terrainColor> biomeColors;
     glm::vec3 color;
     
+    // NOTE: Terrain color height is a value between 0 and 1
+    biomeColors.push_back(terrainColor(WATER_HEIGHT, get_color(82, 121, 211)));
+    biomeColors.push_back(terrainColor(0.45, get_color(201, 223, 164)));
+    biomeColors.push_back(terrainColor(0.7, get_color(99, 167, 68)));
+    biomeColors.push_back(terrainColor(0.85, get_color(72, 68, 75)));
+    biomeColors.push_back(terrainColor(1.0, get_color(255, 255, 255)));
+
     // Spread is the amount of alitude range colors are spread over
     // This accounts for the long tails of perlin noise
-    float spread = 0.45f;
-    float halfSpread = spread / 2;
+    float spread = 0.5f;
+    for (int i = 0; i < biomeColors.size(); i++) {
+        float distFromCenter = 0.5 - biomeColors[i].height;
+        float scaledDistFromCenter = 0.5 - distFromCenter * spread;
+        biomeColors[i].height = scaledDistFromCenter;
+    }
     
-    // Amplitude is the max height of vertices
-    float amplitude = 0;
-    for (int y_val = 1; y_val < vertices.size(); y_val += 3)
-        if (vertices[y_val] > amplitude)
-            amplitude = vertices[y_val];
-    
-    biomeColors.push_back(get_color(201, 178, 99));
-    biomeColors.push_back(get_color(135, 184, 82));
-    biomeColors.push_back(get_color(80, 171, 93));
-    biomeColors.push_back(get_color(120, 120, 120));
-    biomeColors.push_back(get_color(200, 200, 210));
-
-    float part = 1.0f / (biomeColors.size() - 1);
-
+    // Determine which color to assign each vertex by its y-coord
     // Iterate through vertex y values
-    for (int y_val = 1; y_val < vertices.size(); y_val += 3) {
-        float height = vertices[y_val];
-        float value = (height + amplitude) / (amplitude * 2);
-        
-        value = std::max(0.0f, std::min((value - halfSpread) * (1 / spread), 0.9999f));
-        int firstBiome = (int)floor(value / part);
-        float blend = (value - (firstBiome * part)) / part;
-
-        // Lerp between the two biome colors
-        color = (1 - blend) * biomeColors[firstBiome] + blend * biomeColors[firstBiome+1];
+    for (int i = 1; i < vertices.size(); i += 3) {
+        for (int j = 0; j < biomeColors.size(); j++) {
+            // NOTE: The max height of a vertex is "scale"
+            if (vertices[i] <= biomeColors[j].height * scale) {
+                color = biomeColors[j].color;
+                break;
+            }
+        }
         colors.push_back(color.r);
         colors.push_back(color.g);
         colors.push_back(color.b);
@@ -248,32 +308,15 @@ std::vector<float> generate_normals(int width, int height, const std::vector<int
     return normals;
 }
 
-std::vector<float> generate_noise_map(int width, int height) {
-    std::vector<float> noise_map;
-    
-    int seed = 27;
-    int octaves = 3;
-    double frequency = 12;
-    
-    siv::PerlinNoise p(seed);
-    
-    for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++) {
-            noise_map.push_back(p.octaveNoise0_1(x / frequency, y / frequency, octaves));
-        }
-    
-    return noise_map;
-}
-
-std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map) {
+std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map, float scale) {
     std::vector<float> v;
-    float scale = 1.0;
     
     for (int y = 0; y < height + 1; y++)
         for (int x = 0; x < width; x++) {
-            v.push_back(x*scale);
-            v.push_back(noise_map[x + y*width]);
-            v.push_back(y*scale);
+            v.push_back(x);
+            // Pervent vertex height from being below WATER_HEIGHT
+            v.push_back(std::fmax(noise_map[x + y*width], WATER_HEIGHT * scale));
+            v.push_back(y);
         }
     
     return v;

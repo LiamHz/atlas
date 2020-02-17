@@ -105,10 +105,9 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		DF0FBE5B23FA4AB600DE3B80 /* obj */ = {
+		DF0FBE8823FAFF1200DE3B80 /* obj */ = {
 			isa = PBXGroup;
 			children = (
-				DF0FBE8223FA68FC00DE3B80 /* CommonTree_4.mtl */,
 				DF0FBE8123FA68FB00DE3B80 /* CommonTree_4.obj */,
 				DF0FBE6223FA4C6C00DE3B80 /* Cactus_1.mtl */,
 				DF0FBE6723FA4C6C00DE3B80 /* Cactus_1.obj */,
@@ -122,8 +121,9 @@
 				DF0FBE5C23FA4C6C00DE3B80 /* PineTree_Snow_1.obj */,
 				DF0FBE6423FA4C6C00DE3B80 /* Rock_Snow_1.mtl */,
 				DF0FBE5D23FA4C6C00DE3B80 /* Rock_Snow_1.obj */,
+				DF0FBE8223FA68FC00DE3B80 /* CommonTree_4.mtl */,
 			);
-			name = obj;
+			path = obj;
 			sourceTree = "<group>";
 		};
 		DF1EECFE23F6403D001DD8D1 = {
@@ -131,7 +131,7 @@
 			children = (
 				DF1EED2223F6442B001DD8D1 /* terrain-generator.entitlements */,
 				DF1EED0A23F6403D001DD8D1 /* main.cpp */,
-				DF0FBE5B23FA4AB600DE3B80 /* obj */,
+				DF0FBE8823FAFF1200DE3B80 /* obj */,
 				DF0FBE5A23FA47C700DE3B80 /* obj_loader.h */,
 				DF1EED2523F71C40001DD8D1 /* perlin.h */,
 				DF1EED2423F66D01001DD8D1 /* .gitignore */,

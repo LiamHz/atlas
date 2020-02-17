@@ -22,16 +22,33 @@ int init();
 void processInput(GLFWwindow *window, Shader shader);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &map_width, int &map_height, int &nIndices);
+void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices);
 
-std::vector<int> generate_indices(int width, int height);
-std::vector<float> generate_noise_map(int height, int width, float scale, int octaves, float persistence, float lacunarity);
-std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map, float meshHeight);
-std::vector<float> generate_normals(int width, int height, const std::vector<int> &indices, const std::vector<float> &vertices);
-std::vector<float> generate_colors(const std::vector<float> &vertices, float meshHeight);
+std::vector<int> generate_indices();
+std::vector<float> generate_noise_map(int xOffset, int yOffset);
+std::vector<float> generate_vertices(const std::vector<float> &noise_map);
+std::vector<float> generate_normals(const std::vector<int> &indices, const std::vector<float> &vertices);
+std::vector<float> generate_colors(const std::vector<float> &vertices);
+void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset);
+
+GLFWwindow *window;
+
+// Map params
+float WATER_HEIGHT = 0.1;
+int xMapChunks = 5;
+int yMapChunks = 5;
+int chunkWidth = 127;
+int chunkHeight = 127;
+
+// Noise params
+int octaves = 5;
+float meshHeight = 32;  // Vertical scaling
+float noiseScale = 64;  // Horizontal scaling
+float persistence = 0.5;
+float lacunarity = 2;
 
 // Camera
-Camera camera(glm::vec3(0.0f, 20.0f, 0.0f));
+Camera camera(glm::vec3((chunkWidth * xMapChunks) / 2, 20.0f, (chunkHeight * yMapChunks) / 2));
 bool firstMouse = true;
 float lastX = WIDTH / 2;
 float lastY = HEIGHT / 2;
@@ -41,25 +58,12 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 float currentFrame;
 
-// Misc globals
-GLFWwindow *window;
-float WATER_HEIGHT = 0.3;
-
 int main() {
     // Initalize variables
-    int map_width = 127;
-    int map_height = 127;
-    
     glm::mat4 view;
     glm::mat4 model;
     glm::mat4 projection;
     glm::vec3 lightPos;
-    
-    std::vector<int> indices;
-    std::vector<float> noise_map;
-    std::vector<float> vertices;
-    std::vector<float> normals;
-    std::vector<float> colors;
 
     // Initialize GLFW and GLAD
     if (init() != 0)
@@ -74,24 +78,48 @@ int main() {
     // Default to flat mode
     shader.setBool("isFlat", true);
     
-    // Noise params
-    int octaves = 5;
-    float meshHeight = 15;  // Horizontal scaling
-    float noiseScale = 50;  // Vertical scaling
-    float persistence = 0.45;
-    float lacunarity = 2;
+    std::vector<GLuint> map_chunks(xMapChunks * yMapChunks);
+    
+    for (int y = 0; y < yMapChunks; y++)
+        for (int x = 0; x < xMapChunks; x++) {
+            generate_map_chunk(map_chunks[x + y*xMapChunks], x, y);
+        }
+    
+    int nIndices = chunkWidth * chunkHeight * 6;
+    
+    while (!glfwWindowShouldClose(window)) {
+        render(map_chunks, shader, view, model, projection, lightPos, nIndices);
+    }
+    
+    for (int i = 0; i < map_chunks.size(); i++)
+        glDeleteVertexArrays(1, &map_chunks[i]);
+    
+    // TODO VBOs and EBOs aren't being deleted
+    // glDeleteBuffers(3, VBO);
+    // glDeleteBuffers(1, &EBO);
+    
+    glfwTerminate();
+    
+    return 0;
+}
+
+void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset) {
+    std::vector<int> indices;
+    std::vector<float> noise_map;
+    std::vector<float> vertices;
+    std::vector<float> normals;
+    std::vector<float> colors;
     
     // Generate map
-    indices = generate_indices(map_width, map_height);
-    noise_map = generate_noise_map(map_height, map_width, noiseScale, octaves, persistence, lacunarity);
-    vertices = generate_vertices(map_width, map_height, noise_map, meshHeight);
-    normals = generate_normals(map_width, map_height, indices, vertices);
-    colors = generate_colors(vertices, meshHeight);
+    indices = generate_indices();
+    noise_map = generate_noise_map(xOffset, yOffset);
+    vertices = generate_vertices(noise_map);
+    normals = generate_normals(indices, vertices);
+    colors = generate_colors(vertices);
     
-    int nIndices = (int)indices.size();
+    GLuint VBO[3], EBO;
     
     // Create buffers and arrays
-    GLuint VAO, VBO[3], EBO;
     glGenBuffers(3, VBO);
     glGenBuffers(1, &EBO);
     glGenVertexArrays(1, &VAO);
@@ -124,21 +152,9 @@ int main() {
     // Configure vertex colors attribute
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(2);
-    
-    while (!glfwWindowShouldClose(window)) {
-        render(VAO, shader, view, model, projection, lightPos, map_width, map_height, nIndices);
-    }
-    
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(3, VBO);
-    glDeleteBuffers(1, &EBO);
-    
-    glfwTerminate();
-    
-    return 0;
 }
 
-void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &map_width, int &map_height, int &nIndices) {
+void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices) {
     // Per-frame time logic
     currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
@@ -153,7 +169,8 @@ void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model
     shader.use();
 
     // Set projection and view matrix
-    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+    // Last value is draw distance
+    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 700.0f);
     shader.setMat4("u_projection", projection);
     view = camera.GetViewMatrix();
     shader.setMat4("u_view", view);
@@ -162,17 +179,20 @@ void render(const GLuint &VAO, Shader &shader, glm::mat4 &view, glm::mat4 &model
     shader.setVec3("u_viewPos", camera.Position);
     
     // Dynamic lighting
-    lightPos = glm::vec3(glm::sin(0.5*glfwGetTime()) * 100, 20.0, glm::cos(0.5*glfwGetTime()) * 100);
+    lightPos = glm::vec3((chunkWidth * xMapChunks) / 2 + glm::sin(0.25*glfwGetTime()) * 250, 50.0, (chunkHeight * yMapChunks) / 2 +  glm::cos(0.25*glfwGetTime()) * 250);
     shader.setVec3("u_lightPos", lightPos);
     
-    // Render terrain
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-map_width / 2.0, 0.0, -map_height / 2.0));
-    shader.setMat4("u_model", model);
-    shader.setVec3("u_objectColor", glm::vec3(0.2, 0.3, 0.6));
-    
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
+    // Render chunks
+    for (int y = 0; y < yMapChunks; y++)
+        for (int x = 0; x < xMapChunks; x++) {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
+            shader.setMat4("u_model", model);
+            shader.setVec3("u_objectColor", glm::vec3(0.2, 0.3, 0.6));
+            
+            glBindVertexArray(map_chunks[x + y*xMapChunks]);
+            glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
+        }
     
     // Use double buffer
     // Only swap old frame with new when it is completed
@@ -184,25 +204,29 @@ glm::vec3 get_color(int r, int g, int b) {
     return glm::vec3(r/255.0, g/255.0, b/255.0);
 }
 
-std::vector<float> generate_noise_map(int height, int width, float scale, int octaves, float persistence, float lacunarity) {
+std::vector<float> generate_noise_map(int offsetX, int offsetY) {
     std::vector<float> noiseValues;
     std::vector<float> normalizedNoiseValues;
     std::vector<int> p = get_permutation_vector();
     
-    float minNoiseHeight =  1000;
-    float maxNoiseHeight = -1000;
+    float amp  = 1;
+    float freq = 1;
+    float maxPossibleHeight = 0;
     
-    if (scale <= 0)
-        scale = 0.0001f;
-
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            float amp  = 1;
-            float freq = 1;
+    for (int i = 0; i < octaves; i++) {
+        maxPossibleHeight += amp;
+        amp *= persistence;
+    }
+    
+    for (int y = 0; y < chunkHeight; y++) {
+        for (int x = 0; x < chunkWidth; x++) {
+            amp  = 1;
+            freq = 1;
             float noiseHeight = 0;
             for (int i = 0; i < octaves; i++) {
-                float xSample = x / scale * freq;
-                float ySample = y / scale * freq;
+                float xSample = (x + offsetX * (chunkWidth-1))  / noiseScale * freq;
+                float ySample = (y + offsetY * (chunkHeight-1)) / noiseScale * freq;
+                
                 float perlinValue = perlin_noise(xSample, ySample, p);
                 noiseHeight += perlinValue * amp;
                 
@@ -212,19 +236,14 @@ std::vector<float> generate_noise_map(int height, int width, float scale, int oc
                 freq *= lacunarity;
             }
             
-            if (noiseHeight > maxNoiseHeight)
-                maxNoiseHeight = noiseHeight;
-            else if (noiseHeight < minNoiseHeight)
-                minNoiseHeight = noiseHeight;
-            
             noiseValues.push_back(noiseHeight);
         }
     }
     
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
+    for (int y = 0; y < chunkHeight; y++) {
+        for (int x = 0; x < chunkWidth; x++) {
             // Inverse lerp and scale values to range from 0 to 1
-            normalizedNoiseValues.push_back((noiseValues[x + y*width] / (maxNoiseHeight - minNoiseHeight) + 1) / 2);
+            normalizedNoiseValues.push_back((noiseValues[x + y*chunkWidth] + 1) / maxPossibleHeight);
         }
     }
 
@@ -240,19 +259,19 @@ struct terrainColor {
     glm::vec3 color;
 };
 
-std::vector<float> generate_colors(const std::vector<float> &vertices, float meshHeight) {
+std::vector<float> generate_colors(const std::vector<float> &vertices) {
     std::vector<float> colors;
     std::vector<terrainColor> biomeColors;
-    glm::vec3 color;
+    glm::vec3 color = get_color(255, 255, 255);
     
     // NOTE: Terrain color height is a value between 0 and 1
-    biomeColors.push_back(terrainColor(WATER_HEIGHT,        get_color(60,  95, 190)));   // Deep water
-    biomeColors.push_back(terrainColor(WATER_HEIGHT * 1.33, get_color(60, 100, 190)));  // Shallow water
-    biomeColors.push_back(terrainColor(0.45, get_color(210, 215, 130)));                // Sand
-    biomeColors.push_back(terrainColor(0.55, get_color( 95, 165,  30)));                // Grass 1
-    biomeColors.push_back(terrainColor(0.60, get_color( 65, 115,  20)));                // Grass 2
-    biomeColors.push_back(terrainColor(0.70, get_color( 90,  65,  60)));                // Rock 1
-    biomeColors.push_back(terrainColor(0.90, get_color( 75,  60,  55)));                // Rock 2
+    biomeColors.push_back(terrainColor(WATER_HEIGHT * 0.5, get_color(60,  95, 190)));  // Deep water
+    biomeColors.push_back(terrainColor(WATER_HEIGHT,        get_color(60, 100, 190)));  // Shallow water
+    biomeColors.push_back(terrainColor(0.15, get_color(210, 215, 130)));                // Sand
+    biomeColors.push_back(terrainColor(0.30, get_color( 95, 165,  30)));                // Grass 1
+    biomeColors.push_back(terrainColor(0.40, get_color( 65, 115,  20)));                // Grass 2
+    biomeColors.push_back(terrainColor(0.50, get_color( 90,  65,  60)));                // Rock 1
+    biomeColors.push_back(terrainColor(0.80, get_color( 75,  60,  55)));                // Rock 2
     biomeColors.push_back(terrainColor(1.00, get_color(255, 255, 255)));                // Snow
     
     // Determine which color to assign each vertex by its y-coord
@@ -273,7 +292,7 @@ std::vector<float> generate_colors(const std::vector<float> &vertices, float mes
     return colors;
 }
 
-std::vector<float> generate_normals(int width, int height, const std::vector<int> &indices, const std::vector<float> &vertices) {
+std::vector<float> generate_normals(const std::vector<int> &indices, const std::vector<float> &vertices) {
     int pos;
     glm::vec3 normal;
     std::vector<float> normals;
@@ -303,42 +322,41 @@ std::vector<float> generate_normals(int width, int height, const std::vector<int
     return normals;
 }
 
-std::vector<float> generate_vertices(int width, int height, const std::vector<float> &noise_map, float meshHeight) {
+std::vector<float> generate_vertices(const std::vector<float> &noise_map) {
     std::vector<float> v;
     
-    for (int y = 0; y < height + 1; y++)
-        for (int x = 0; x < width; x++) {
+    for (int y = 0; y < chunkHeight + 1; y++)
+        for (int x = 0; x < chunkWidth; x++) {
             v.push_back(x);
-            // Raising noise to a power creates an easing function
-            // Multiplying easedNoise shifts its distribution
-            float easedNoise = std::pow(noise_map[x + y*width], 3) * 3;
+            // Apply cubic easing to the noise
+            float easedNoise = std::pow(noise_map[x + y*chunkWidth] * 1.1, 3);
             // Scale noise to match meshHeight
             // Pervent vertex height from being below WATER_HEIGHT
-            v.push_back(std::fmax(easedNoise * meshHeight, WATER_HEIGHT * meshHeight));
+            v.push_back(std::fmax(easedNoise * meshHeight, WATER_HEIGHT * 0.5 * meshHeight));
             v.push_back(y);
         }
     
     return v;
 }
 
-std::vector<int> generate_indices(int width, int height) {
+std::vector<int> generate_indices() {
     std::vector<int> indices;
     
-    for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++) {
-            int pos = x + y*width;
+    for (int y = 0; y < chunkHeight; y++)
+        for (int x = 0; x < chunkWidth; x++) {
+            int pos = x + y*chunkWidth;
             
-            if (x == width - 1 || y == height - 1) {
+            if (x == chunkWidth - 1 || y == chunkHeight - 1) {
                 // Don't create indices for right or top edge
                 continue;
             } else {
                 // Top left triangle of square
-                indices.push_back(pos + width);
+                indices.push_back(pos + chunkWidth);
                 indices.push_back(pos);
-                indices.push_back(pos + width + 1);
+                indices.push_back(pos + chunkWidth + 1);
                 // Bottom right triangle of square
                 indices.push_back(pos + 1);
-                indices.push_back(pos + 1 + width);
+                indices.push_back(pos + 1 + chunkWidth);
                 indices.push_back(pos);
             }
         }

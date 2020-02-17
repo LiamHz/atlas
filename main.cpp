@@ -35,10 +35,15 @@ GLFWwindow *window;
 
 // Map params
 float WATER_HEIGHT = 0.1;
-int xMapChunks = 5;
-int yMapChunks = 5;
+int chunk_render_distance = 3;
+int xMapChunks = 16;
+int yMapChunks = 16;
 int chunkWidth = 127;
 int chunkHeight = 127;
+int gridPosX = 0;
+int gridPosY = 0;
+float originX = (chunkWidth  * xMapChunks) / 2;
+float originY = (chunkHeight * yMapChunks) / 2;
 
 // Noise params
 int octaves = 5;
@@ -48,7 +53,7 @@ float persistence = 0.5;
 float lacunarity = 2;
 
 // Camera
-Camera camera(glm::vec3((chunkWidth * xMapChunks) / 2, 20.0f, (chunkHeight * yMapChunks) / 2));
+Camera camera(glm::vec3(originX, 20.0f, originY));
 bool firstMouse = true;
 float lastX = WIDTH / 2;
 float lastY = HEIGHT / 2;
@@ -154,6 +159,9 @@ void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset) {
     glEnableVertexAttribArray(2);
 }
 
+double lastTime = glfwGetTime();
+int nbFrames = 0;
+
 void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices) {
     // Per-frame time logic
     currentFrame = glfwGetTime();
@@ -169,8 +177,8 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
     shader.use();
 
     // Set projection and view matrix
-    // Last value is draw distance
-    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 700.0f);
+    // Last value is draw distance - set to render distance scaled by root 2
+    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, (float)chunkWidth * chunk_render_distance - chunkWidth / 2);
     shader.setMat4("u_projection", projection);
     view = camera.GetViewMatrix();
     shader.setMat4("u_view", view);
@@ -179,20 +187,42 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
     shader.setVec3("u_viewPos", camera.Position);
     
     // Dynamic lighting
-    lightPos = glm::vec3((chunkWidth * xMapChunks) / 2 + glm::sin(0.25*glfwGetTime()) * 250, 50.0, (chunkHeight * yMapChunks) / 2 +  glm::cos(0.25*glfwGetTime()) * 250);
+    lightPos = glm::vec3(originX + glm::sin(0.25*glfwGetTime()) * 250, 50.0, originY + glm::cos(0.25*glfwGetTime()) * 250);
     shader.setVec3("u_lightPos", lightPos);
     
-    // Render chunks
+    // Measures number of map chunks away from origin map chunk the camera is
+    gridPosX = (int)(camera.Position.x - originX) / chunkWidth + xMapChunks / 2;
+    gridPosY = (int)(camera.Position.z - originY) / chunkHeight + yMapChunks / 2;
+    
+
+    int z = 0;
+    // Render map chunks
     for (int y = 0; y < yMapChunks; y++)
         for (int x = 0; x < xMapChunks; x++) {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
-            shader.setMat4("u_model", model);
-            shader.setVec3("u_objectColor", glm::vec3(0.2, 0.3, 0.6));
-            
-            glBindVertexArray(map_chunks[x + y*xMapChunks]);
-            glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
+            // Only render chunk if it's within render distance
+            if (std::abs(gridPosX - x) <= chunk_render_distance && std::abs(gridPosY - y) <= chunk_render_distance) {
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
+                shader.setMat4("u_model", model);
+                shader.setVec3("u_objectColor", glm::vec3(0.2, 0.3, 0.6));
+                
+                glBindVertexArray(map_chunks[x + y*xMapChunks]);
+                glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
+                z++;
+            }
         }
+    
+    std::cout << z << std::endl;
+    
+    // Measure speed in ms per frame
+    double currentTime = glfwGetTime();
+    nbFrames++;
+    // If last prinf() was more than 1 sec ago printf and reset timer
+    if (currentTime - lastTime >= 1.0 ){
+        printf("%f ms/frame\n", 1000.0/double(nbFrames));
+        nbFrames = 0;
+        lastTime += 1.0;
+    }
     
     // Use double buffer
     // Only swap old frame with new when it is completed

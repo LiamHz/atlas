@@ -7,6 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DF0FBE6823FA4C8800DE3B80 /* Cactus_1.mtl in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE6223FA4C6C00DE3B80 /* Cactus_1.mtl */; };
+		DF0FBE6923FA4C8800DE3B80 /* Cactus_1.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE6723FA4C6C00DE3B80 /* Cactus_1.obj */; };
+		DF0FBE6A23FA4C8800DE3B80 /* CommonTree_1.mtl in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE5E23FA4C6C00DE3B80 /* CommonTree_1.mtl */; };
+		DF0FBE6B23FA4C8800DE3B80 /* CommonTree_1.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE6123FA4C6C00DE3B80 /* CommonTree_1.obj */; };
+		DF0FBE6C23FA4C8800DE3B80 /* Flowers.mtl in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE5F23FA4C6C00DE3B80 /* Flowers.mtl */; };
+		DF0FBE6D23FA4C8800DE3B80 /* Flowers.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE6023FA4C6C00DE3B80 /* Flowers.obj */; };
+		DF0FBE6E23FA4C8800DE3B80 /* PalmTree_1.mtl in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE6323FA4C6C00DE3B80 /* PalmTree_1.mtl */; };
+		DF0FBE6F23FA4C8800DE3B80 /* PalmTree_1.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE6623FA4C6C00DE3B80 /* PalmTree_1.obj */; };
+		DF0FBE7023FA4C8800DE3B80 /* PineTree_Snow_1.mtl in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE6523FA4C6C00DE3B80 /* PineTree_Snow_1.mtl */; };
+		DF0FBE7123FA4C8800DE3B80 /* PineTree_Snow_1.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE5C23FA4C6C00DE3B80 /* PineTree_Snow_1.obj */; };
+		DF0FBE7223FA4C8800DE3B80 /* Rock_Snow_1.mtl in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE6423FA4C6C00DE3B80 /* Rock_Snow_1.mtl */; };
+		DF0FBE7323FA4C8800DE3B80 /* Rock_Snow_1.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE5D23FA4C6C00DE3B80 /* Rock_Snow_1.obj */; };
+		DF0FBE8323FA68FC00DE3B80 /* CommonTree_4.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE8123FA68FB00DE3B80 /* CommonTree_4.obj */; };
+		DF0FBE8423FA68FC00DE3B80 /* CommonTree_4.mtl in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE8223FA68FC00DE3B80 /* CommonTree_4.mtl */; };
 		DF1EED0B23F6403D001DD8D1 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DF1EED0A23F6403D001DD8D1 /* main.cpp */; };
 		DF1EED1723F64255001DD8D1 /* glad.c in Sources */ = {isa = PBXBuildFile; fileRef = DF1EED1623F64255001DD8D1 /* glad.c */; };
 		DF1EED1923F64358001DD8D1 /* fshader.fs in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF1EED1423F64255001DD8D1 /* fshader.fs */; };
@@ -23,6 +37,20 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
+				DF0FBE8323FA68FC00DE3B80 /* CommonTree_4.obj in CopyFiles */,
+				DF0FBE8423FA68FC00DE3B80 /* CommonTree_4.mtl in CopyFiles */,
+				DF0FBE6823FA4C8800DE3B80 /* Cactus_1.mtl in CopyFiles */,
+				DF0FBE6923FA4C8800DE3B80 /* Cactus_1.obj in CopyFiles */,
+				DF0FBE6A23FA4C8800DE3B80 /* CommonTree_1.mtl in CopyFiles */,
+				DF0FBE6B23FA4C8800DE3B80 /* CommonTree_1.obj in CopyFiles */,
+				DF0FBE6C23FA4C8800DE3B80 /* Flowers.mtl in CopyFiles */,
+				DF0FBE6D23FA4C8800DE3B80 /* Flowers.obj in CopyFiles */,
+				DF0FBE6E23FA4C8800DE3B80 /* PalmTree_1.mtl in CopyFiles */,
+				DF0FBE6F23FA4C8800DE3B80 /* PalmTree_1.obj in CopyFiles */,
+				DF0FBE7023FA4C8800DE3B80 /* PineTree_Snow_1.mtl in CopyFiles */,
+				DF0FBE7123FA4C8800DE3B80 /* PineTree_Snow_1.obj in CopyFiles */,
+				DF0FBE7223FA4C8800DE3B80 /* Rock_Snow_1.mtl in CopyFiles */,
+				DF0FBE7323FA4C8800DE3B80 /* Rock_Snow_1.obj in CopyFiles */,
 				DF1EED1923F64358001DD8D1 /* fshader.fs in CopyFiles */,
 				DF1EED1A23F64358001DD8D1 /* vshader.vs in CopyFiles */,
 			);
@@ -31,6 +59,21 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		DF0FBE5A23FA47C700DE3B80 /* obj_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = obj_loader.h; sourceTree = "<group>"; };
+		DF0FBE5C23FA4C6C00DE3B80 /* PineTree_Snow_1.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = PineTree_Snow_1.obj; sourceTree = "<group>"; };
+		DF0FBE5D23FA4C6C00DE3B80 /* Rock_Snow_1.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Rock_Snow_1.obj; sourceTree = "<group>"; };
+		DF0FBE5E23FA4C6C00DE3B80 /* CommonTree_1.mtl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CommonTree_1.mtl; sourceTree = "<group>"; };
+		DF0FBE5F23FA4C6C00DE3B80 /* Flowers.mtl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Flowers.mtl; sourceTree = "<group>"; };
+		DF0FBE6023FA4C6C00DE3B80 /* Flowers.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Flowers.obj; sourceTree = "<group>"; };
+		DF0FBE6123FA4C6C00DE3B80 /* CommonTree_1.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CommonTree_1.obj; sourceTree = "<group>"; };
+		DF0FBE6223FA4C6C00DE3B80 /* Cactus_1.mtl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Cactus_1.mtl; sourceTree = "<group>"; };
+		DF0FBE6323FA4C6C00DE3B80 /* PalmTree_1.mtl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = PalmTree_1.mtl; sourceTree = "<group>"; };
+		DF0FBE6423FA4C6C00DE3B80 /* Rock_Snow_1.mtl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Rock_Snow_1.mtl; sourceTree = "<group>"; };
+		DF0FBE6523FA4C6C00DE3B80 /* PineTree_Snow_1.mtl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = PineTree_Snow_1.mtl; sourceTree = "<group>"; };
+		DF0FBE6623FA4C6C00DE3B80 /* PalmTree_1.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = PalmTree_1.obj; sourceTree = "<group>"; };
+		DF0FBE6723FA4C6C00DE3B80 /* Cactus_1.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Cactus_1.obj; sourceTree = "<group>"; };
+		DF0FBE8123FA68FB00DE3B80 /* CommonTree_4.obj */ = {isa = PBXFileReference; lastKnownFileType = text; path = CommonTree_4.obj; sourceTree = "<group>"; };
+		DF0FBE8223FA68FC00DE3B80 /* CommonTree_4.mtl */ = {isa = PBXFileReference; lastKnownFileType = text; path = CommonTree_4.mtl; sourceTree = "<group>"; };
 		DF1EED0723F6403D001DD8D1 /* terrain-generator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "terrain-generator"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DF1EED0A23F6403D001DD8D1 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		DF1EED1123F64255001DD8D1 /* shader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = shader.h; sourceTree = "<group>"; };
@@ -62,11 +105,34 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		DF0FBE5B23FA4AB600DE3B80 /* obj */ = {
+			isa = PBXGroup;
+			children = (
+				DF0FBE8223FA68FC00DE3B80 /* CommonTree_4.mtl */,
+				DF0FBE8123FA68FB00DE3B80 /* CommonTree_4.obj */,
+				DF0FBE6223FA4C6C00DE3B80 /* Cactus_1.mtl */,
+				DF0FBE6723FA4C6C00DE3B80 /* Cactus_1.obj */,
+				DF0FBE5E23FA4C6C00DE3B80 /* CommonTree_1.mtl */,
+				DF0FBE6123FA4C6C00DE3B80 /* CommonTree_1.obj */,
+				DF0FBE5F23FA4C6C00DE3B80 /* Flowers.mtl */,
+				DF0FBE6023FA4C6C00DE3B80 /* Flowers.obj */,
+				DF0FBE6323FA4C6C00DE3B80 /* PalmTree_1.mtl */,
+				DF0FBE6623FA4C6C00DE3B80 /* PalmTree_1.obj */,
+				DF0FBE6523FA4C6C00DE3B80 /* PineTree_Snow_1.mtl */,
+				DF0FBE5C23FA4C6C00DE3B80 /* PineTree_Snow_1.obj */,
+				DF0FBE6423FA4C6C00DE3B80 /* Rock_Snow_1.mtl */,
+				DF0FBE5D23FA4C6C00DE3B80 /* Rock_Snow_1.obj */,
+			);
+			name = obj;
+			sourceTree = "<group>";
+		};
 		DF1EECFE23F6403D001DD8D1 = {
 			isa = PBXGroup;
 			children = (
 				DF1EED2223F6442B001DD8D1 /* terrain-generator.entitlements */,
 				DF1EED0A23F6403D001DD8D1 /* main.cpp */,
+				DF0FBE5B23FA4AB600DE3B80 /* obj */,
+				DF0FBE5A23FA47C700DE3B80 /* obj_loader.h */,
 				DF1EED2523F71C40001DD8D1 /* perlin.h */,
 				DF1EED2423F66D01001DD8D1 /* .gitignore */,
 				DF1EED0823F6403D001DD8D1 /* Products */,

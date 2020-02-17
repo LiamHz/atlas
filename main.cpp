@@ -14,15 +14,16 @@
 #include "shader.h"
 #include "camera.h"
 #include "perlin.h"
+#include "obj_loader.h"
 
 const GLint WIDTH = 1920, HEIGHT = 1080;
 
 // Functions
 int init();
-void processInput(GLFWwindow *window, Shader shader);
+void processInput(GLFWwindow *window, Shader &shader);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices);
+void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices, GLuint &treeVAO, GLuint &flowerVAO);
 
 std::vector<int> generate_indices();
 std::vector<float> generate_noise_map(int xOffset, int yOffset);
@@ -31,19 +32,21 @@ std::vector<float> generate_normals(const std::vector<int> &indices, const std::
 std::vector<float> generate_colors(const std::vector<float> &vertices);
 void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset);
 
+void load_model(GLuint &VAO, std::string filename);
+
 GLFWwindow *window;
 
 // Map params
 float WATER_HEIGHT = 0.1;
 int chunk_render_distance = 3;
-int xMapChunks = 16;
-int yMapChunks = 16;
+int xMapChunks = 1;
+int yMapChunks = 1;
 int chunkWidth = 127;
 int chunkHeight = 127;
 int gridPosX = 0;
 int gridPosY = 0;
-float originX = (chunkWidth  * xMapChunks) / 2;
-float originY = (chunkHeight * yMapChunks) / 2;
+float originX = (chunkWidth  * xMapChunks) / 2 - chunkWidth / 2;
+float originY = (chunkHeight * yMapChunks) / 2 - chunkHeight / 2;
 
 // Noise params
 int octaves = 5;
@@ -51,6 +54,10 @@ float meshHeight = 32;  // Vertical scaling
 float noiseScale = 64;  // Horizontal scaling
 float persistence = 0.5;
 float lacunarity = 2;
+
+// Foliage
+std::vector<float> flowers;
+std::vector<float> trees;
 
 // Camera
 Camera camera(glm::vec3(originX, 20.0f, originY));
@@ -92,8 +99,13 @@ int main() {
     
     int nIndices = chunkWidth * chunkHeight * 6;
     
+    GLuint treeVAO, flowerVAO;
+//    load_model(treeVAO, "CommonTree_4.obj");
+    load_model(treeVAO, "PineTree_Snow_1.obj");
+    load_model(flowerVAO, "Flowers.obj");
+    
     while (!glfwWindowShouldClose(window)) {
-        render(map_chunks, shader, view, model, projection, lightPos, nIndices);
+        render(map_chunks, shader, view, model, projection, lightPos, nIndices, treeVAO, flowerVAO);
     }
     
     for (int i = 0; i < map_chunks.size(); i++)
@@ -106,6 +118,77 @@ int main() {
     glfwTerminate();
     
     return 0;
+}
+
+void load_model(GLuint &VAO, std::string filename) {
+    std::vector<float> vertices;
+    std::vector<int> indices;
+    
+    objl::Loader Loader;
+    bool loadout = Loader.LoadFile(filename);
+    
+    float brightness = 2.5;
+    
+    if (loadout) {
+        // Go through each loaded mesh and out its contents
+        for (int i = 0; i < Loader.LoadedMeshes.size(); i++) {
+            // Copy one of the loaded meshes to be our current mesh
+            objl::Mesh curMesh = Loader.LoadedMeshes[i];
+
+            // Go through each vertex and print its number,
+            //  position, normal, and texture coordinate
+            for (int j = 0; j < curMesh.Vertices.size(); j++) {
+                // Vertices
+                vertices.push_back(curMesh.Vertices[j].Position.X);
+                vertices.push_back(curMesh.Vertices[j].Position.Y);
+                vertices.push_back(curMesh.Vertices[j].Position.Z);
+                // Normals
+                vertices.push_back(curMesh.Vertices[j].Normal.X);
+                vertices.push_back(curMesh.Vertices[j].Normal.Y);
+                vertices.push_back(curMesh.Vertices[j].Normal.Z);
+                // Colors
+                vertices.push_back(curMesh.MeshMaterial.Kd.X*brightness);
+                vertices.push_back(curMesh.MeshMaterial.Kd.Y*brightness);
+                vertices.push_back(curMesh.MeshMaterial.Kd.Z*brightness);
+            }
+
+            for (int j = 0; j < curMesh.Indices.size(); j++) {
+                indices.push_back(curMesh.Indices[j]);
+            }
+        }
+    } else {
+        std::cout << "Failed to Load File. May have failed to find it or it was not an .obj file.\n";
+    }
+    
+    std::cout << "nIndices " << indices.size() << std::endl;
+    
+    GLuint VBO, EBO;
+    
+    // Create buffers and arrays
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+    glGenVertexArrays(1, &VAO);
+    
+    // Bind vertices to VBOw
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+    
+    // Create element buffer
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices[0], GL_STATIC_DRAW);
+    
+    // Configure vertex position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    // Configure vertex normals attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    // Configure vertex color attribute
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 }
 
 void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset) {
@@ -162,7 +245,7 @@ void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset) {
 double lastTime = glfwGetTime();
 int nbFrames = 0;
 
-void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices) {
+void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices, GLuint &treeVAO, GLuint &flowerVAO) {
     // Per-frame time logic
     currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
@@ -178,7 +261,7 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
 
     // Set projection and view matrix
     // Last value is draw distance - set to render distance scaled by root 2
-    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, (float)chunkWidth * chunk_render_distance - chunkWidth / 2);
+    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, (float)chunkWidth * chunk_render_distance - chunkWidth / 4);
     shader.setMat4("u_projection", projection);
     view = camera.GetViewMatrix();
     shader.setMat4("u_view", view);
@@ -187,15 +270,13 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
     shader.setVec3("u_viewPos", camera.Position);
     
     // Dynamic lighting
-    lightPos = glm::vec3(originX + glm::sin(0.25*glfwGetTime()) * 250, 50.0, originY + glm::cos(0.25*glfwGetTime()) * 250);
+    lightPos = glm::vec3(originX + glm::sin(0.25*glfwGetTime()) * 10, 30.0, originY + glm::cos(0.25*glfwGetTime()) * 10);
     shader.setVec3("u_lightPos", lightPos);
     
     // Measures number of map chunks away from origin map chunk the camera is
     gridPosX = (int)(camera.Position.x - originX) / chunkWidth + xMapChunks / 2;
     gridPosY = (int)(camera.Position.z - originY) / chunkHeight + yMapChunks / 2;
     
-
-    int z = 0;
     // Render map chunks
     for (int y = 0; y < yMapChunks; y++)
         for (int x = 0; x < xMapChunks; x++) {
@@ -204,22 +285,39 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
                 model = glm::mat4(1.0f);
                 model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
                 shader.setMat4("u_model", model);
-                shader.setVec3("u_objectColor", glm::vec3(0.2, 0.3, 0.6));
                 
                 glBindVertexArray(map_chunks[x + y*xMapChunks]);
                 glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
-                z++;
             }
         }
     
-    std::cout << z << std::endl;
+    // TODO Change model translation for the map chunk it was generated from
+    // Render flower
+    for (int i = 0; i < flowers.size(); i += 3) {
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + flowers[i], flowers[i+1], -chunkHeight / 2.0 + flowers[i+2]));
+        shader.setMat4("u_model", model);
+        
+        glBindVertexArray(flowerVAO);
+        glDrawElements(GL_TRIANGLES, 637, GL_UNSIGNED_INT, 0);
+    }
+    
+    // Render Trees
+    for (int i = 0; i < trees.size(); i += 3) {
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + trees[i], trees[i+1], -chunkHeight / 2.0 + trees[i+2]));
+        shader.setMat4("u_model", model);
+        
+        glBindVertexArray(treeVAO);
+        glDrawElements(GL_TRIANGLES, 8664, GL_UNSIGNED_INT, 0);
+    }
     
     // Measure speed in ms per frame
     double currentTime = glfwGetTime();
     nbFrames++;
     // If last prinf() was more than 1 sec ago printf and reset timer
     if (currentTime - lastTime >= 1.0 ){
-        printf("%f ms/frame\n", 1000.0/double(nbFrames));
+//        printf("%f ms/frame\n", 1000.0/double(nbFrames));
         nbFrames = 0;
         lastTime += 1.0;
     }
@@ -295,7 +393,7 @@ std::vector<float> generate_colors(const std::vector<float> &vertices) {
     glm::vec3 color = get_color(255, 255, 255);
     
     // NOTE: Terrain color height is a value between 0 and 1
-    biomeColors.push_back(terrainColor(WATER_HEIGHT * 0.5, get_color(60,  95, 190)));  // Deep water
+    biomeColors.push_back(terrainColor(WATER_HEIGHT * 0.5, get_color(60,  95, 190)));   // Deep water
     biomeColors.push_back(terrainColor(WATER_HEIGHT,        get_color(60, 100, 190)));  // Shallow water
     biomeColors.push_back(terrainColor(0.15, get_color(210, 215, 130)));                // Sand
     biomeColors.push_back(terrainColor(0.30, get_color( 95, 165,  30)));                // Grass 1
@@ -311,6 +409,19 @@ std::vector<float> generate_colors(const std::vector<float> &vertices) {
             // NOTE: The max height of a vertex is "meshHeight"
             if (vertices[i] <= biomeColors[j].height * meshHeight) {
                 color = biomeColors[j].color;
+                if (j >= 3 && j <= 4) {
+                    if (rand() % 100 < 10) {
+                        if (rand() % 100 < 90) {
+                            flowers.push_back(vertices[i-1]);
+                            flowers.push_back(vertices[i]);
+                            flowers.push_back(vertices[i+1]);
+                        } else {
+                            trees.push_back(vertices[i-1]);
+                            trees.push_back(vertices[i]);
+                            trees.push_back(vertices[i+1]);
+                        }
+                    }
+                }
                 break;
             }
         }
@@ -318,6 +429,8 @@ std::vector<float> generate_colors(const std::vector<float> &vertices) {
         colors.push_back(color.g);
         colors.push_back(color.b);
     }
+    
+    std::cout << flowers.size() / 3 << std::endl;
     
     return colors;
 }
@@ -439,7 +552,7 @@ int init() {
     return 0;
 }
 
-void processInput(GLFWwindow *window, Shader shader) {
+void processInput(GLFWwindow *window, Shader &shader) {
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     

@@ -62,8 +62,8 @@ GLFWwindow *window;
 // Map params
 float WATER_HEIGHT = 0.1;
 int chunk_render_distance = 3;
-int xMapChunks = 12;
-int yMapChunks = 12;
+int xMapChunks = 16;
+int yMapChunks = 16;
 int chunkWidth = 127;
 int chunkHeight = 127;
 int gridPosX = 0;
@@ -186,9 +186,6 @@ void setup_instancing(GLuint &VAO, std::vector<GLuint> &plant_chunk, std::string
             // Instanced array
             // Move to next vertex attrib on next instance of object
             glVertexAttribDivisor(3, 1);
-            
-            // Unbind buffer
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
     }
 }
@@ -335,9 +332,6 @@ void load_model(GLuint &VAO, std::string filename) {
     // Configure vertex color attribute
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
-    
-    // Unbind buffer
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vector<plant> &plants) {
@@ -389,9 +383,6 @@ void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vector<plant
     // Configure vertex colors attribute
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(2);
-    
-    // Unbind buffer
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 glm::vec3 get_color(int r, int g, int b) {
@@ -477,16 +468,16 @@ std::vector<float> generate_biome(const std::vector<float> &vertices, std::vecto
             // NOTE: The max height of a vertex is "meshHeight"
             if (vertices[i] <= biomeColors[j].height * meshHeight) {
                 color = biomeColors[j].color;
-//                if (j == 3) {
-//                    if (rand() % 1000 < 8) {
-//                        if (rand() % 100 < 90) {
-//                            plantType = "flower";
-//                        } else {
-//                            plantType = "tree";
-//                        }
-//                        plants.push_back(plant{plantType, vertices[i-1], vertices[i], vertices[i+1], xOffset, yOffset});
-//                    }
-//                }
+                if (j == 3) {
+                    if (rand() % 1000 < 8) {
+                        if (rand() % 100 < 90) {
+                            plantType = "flower";
+                        } else {
+                            plantType = "tree";
+                        }
+                        plants.push_back(plant{plantType, vertices[i-1], vertices[i], vertices[i+1], xOffset, yOffset});
+                    }
+                }
                 break;
             }
         }

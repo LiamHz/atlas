@@ -206,7 +206,7 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
 
     // Set projection and view matrix
     // Last value is draw distance - set to render distance scaled by root 2
-    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, (float)chunkWidth * (chunk_render_distance - 1));
+    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, (float)chunkWidth * (chunk_render_distance - 1.2f));
     shader.setMat4("u_projection", projection);
     view = camera.GetViewMatrix();
     shader.setMat4("u_view", view);
@@ -235,19 +235,17 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
                 glBindVertexArray(map_chunks[x + y*xMapChunks]);
                 glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
                 
-                if (std::abs(gridPosX - x) <= 2 && std::abs(gridPosY - y) <= 2) {
-                    // Plant chunks
-                    model = glm::mat4(1.0f);
-                    model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
-                    model = glm::scale(model, glm::vec3(MODEL_SCALE));
-                    shader.setMat4("u_model", model);
+                // Plant chunks
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
+                model = glm::scale(model, glm::vec3(MODEL_SCALE));
+                shader.setMat4("u_model", model);
 
-                    glBindVertexArray(flower_chunks[x + y*xMapChunks]);
-                    glDrawArraysInstanced(GL_TRIANGLES, 0, 1300, 16);
+                glBindVertexArray(flower_chunks[x + y*xMapChunks]);
+                glDrawArraysInstanced(GL_TRIANGLES, 0, 1300, 16);
 
-                    glBindVertexArray(tree_chunks[x + y*xMapChunks]);
-                    glDrawArraysInstanced(GL_TRIANGLES, 0, 10192, 8);
-                }
+                glBindVertexArray(tree_chunks[x + y*xMapChunks]);
+                glDrawArraysInstanced(GL_TRIANGLES, 0, 10192, 8);
             }
         }
     

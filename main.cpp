@@ -11,14 +11,36 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
 #include "shader.h"
 #include "camera.h"
 #include "perlin.h"
-#include "obj_loader.h"
 
 const GLint WIDTH = 1920, HEIGHT = 1080;
 
+// Structs
+struct plant {
+    std::string type;
+    float xpos;
+    float ypos;
+    float zpos;
+    int xOffset;
+    int yOffset;
+    
+    plant(std::string _type, float _xpos, float _ypos, float _zpos, int _xOffset, int _yOffset) {
+        type = _type;
+        xpos = _xpos;
+        ypos = _ypos;
+        zpos = _zpos;
+        xOffset = _xOffset;
+        yOffset = _yOffset;
+    }
+};
+
 // Functions
+std::vector<float> get_cube(int x, int y, int z);
+
 int init();
 void processInput(GLFWwindow *window, Shader &shader);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
@@ -29,18 +51,19 @@ std::vector<int> generate_indices();
 std::vector<float> generate_noise_map(int xOffset, int yOffset);
 std::vector<float> generate_vertices(const std::vector<float> &noise_map);
 std::vector<float> generate_normals(const std::vector<int> &indices, const std::vector<float> &vertices);
-std::vector<float> generate_colors(const std::vector<float> &vertices);
-void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset);
+std::vector<float> generate_biome(const std::vector<float> &vertices, std::vector<plant> &plants, int xOffset, int yOffset);
+void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vector<plant> &plants);
 
 void load_model(GLuint &VAO, std::string filename);
+void setup_instancing(GLuint &VAO, std::string plant_type, std::vector<plant> &plants);
 
 GLFWwindow *window;
 
 // Map params
 float WATER_HEIGHT = 0.1;
-int chunk_render_distance = 3;
-int xMapChunks = 1;
-int yMapChunks = 1;
+int chunk_render_distance = 4;
+int xMapChunks = 3;
+int yMapChunks = 3;
 int chunkWidth = 127;
 int chunkHeight = 127;
 int gridPosX = 0;
@@ -55,9 +78,13 @@ float noiseScale = 64;  // Horizontal scaling
 float persistence = 0.5;
 float lacunarity = 2;
 
-// Foliage
-std::vector<float> flowers;
-std::vector<float> trees;
+// Model params
+float MODEL_SCALE = 2;
+float MODEL_BRIGHTNESS = 3;
+
+// FPS
+double lastTime = glfwGetTime();
+int nbFrames = 0;
 
 // Camera
 Camera camera(glm::vec3(originX, 20.0f, originY));
@@ -76,6 +103,7 @@ int main() {
     glm::mat4 model;
     glm::mat4 projection;
     glm::vec3 lightPos;
+    std::vector<plant> plants;
 
     // Initialize GLFW and GLAD
     if (init() != 0)
@@ -94,15 +122,17 @@ int main() {
     
     for (int y = 0; y < yMapChunks; y++)
         for (int x = 0; x < xMapChunks; x++) {
-            generate_map_chunk(map_chunks[x + y*xMapChunks], x, y);
+            generate_map_chunk(map_chunks[x + y*xMapChunks], x, y, plants);
         }
     
     int nIndices = chunkWidth * chunkHeight * 6;
     
     GLuint treeVAO, flowerVAO;
-//    load_model(treeVAO, "CommonTree_4.obj");
-    load_model(treeVAO, "PineTree_Snow_1.obj");
+    load_model(treeVAO, "CommonTree_4.obj");
     load_model(flowerVAO, "Flowers.obj");
+    
+    setup_instancing(treeVAO, "tree", plants);
+    setup_instancing(flowerVAO, "flower", plants);
     
     while (!glfwWindowShouldClose(window)) {
         render(map_chunks, shader, view, model, projection, lightPos, nIndices, treeVAO, flowerVAO);
@@ -120,47 +150,151 @@ int main() {
     return 0;
 }
 
+void setup_instancing(GLuint &VAO, std::string plant_type, std::vector<plant> &plants) {
+    std::vector<float> instances;
+
+    // Instancing prep
+    for (int i = 0; i < plants.size(); i++) {
+        float xPos = (-chunkWidth / 2.0 + plants[i].xpos + (chunkWidth - 1) * plants[i].xOffset) / MODEL_SCALE;
+        float yPos = (plants[i].ypos) / MODEL_SCALE;
+        float zPos = (-chunkHeight / 2.0 + plants[i].zpos + (chunkHeight - 1) * plants[i].yOffset) / MODEL_SCALE;
+        
+        if (plants[i].type == plant_type) {
+            instances.push_back(xPos);
+            instances.push_back(yPos);
+            instances.push_back(zPos);
+        }
+    }
+        
+    GLuint instancesVBO;
+    glBindVertexArray(VAO);
+    
+    glGenBuffers(1, &instancesVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, instancesVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * instances.size(), &instances[0], GL_STATIC_DRAW);
+    
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    
+    // Instanced array
+    // Move to next vertex attrib on next instance of object
+    glVertexAttribDivisor(3, 1);
+}
+
+void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices, GLuint &treeVAO, GLuint &flowerVAO) {
+    // Per-frame time logic
+    currentFrame = glfwGetTime();
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
+    
+    processInput(window, shader);
+    
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Activate shader
+    shader.use();
+
+    // Set projection and view matrix
+    // Last value is draw distance - set to render distance scaled by root 2
+    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, (float)chunkWidth * (chunk_render_distance - 1));
+    shader.setMat4("u_projection", projection);
+    view = camera.GetViewMatrix();
+    shader.setMat4("u_view", view);
+    
+    // Set view position
+    shader.setVec3("u_viewPos", camera.Position);
+    
+    // Dynamic lighting
+    lightPos = glm::vec3(originX + glm::sin(0.6*glfwGetTime()) * chunkWidth * xMapChunks / 4, 50.0, originY + glm::cos(0.6*glfwGetTime()) * chunkHeight * yMapChunks / 4);
+    shader.setVec3("u_lightPos", lightPos);
+    
+    // Measures number of map chunks away from origin map chunk the camera is
+    gridPosX = (int)(camera.Position.x - originX) / chunkWidth + xMapChunks / 2;
+    gridPosY = (int)(camera.Position.z - originY) / chunkHeight + yMapChunks / 2;
+    
+    // Render map chunks
+    for (int y = 0; y < yMapChunks; y++)
+        for (int x = 0; x < xMapChunks; x++) {
+            // Only render chunk if it's within render distance
+            if (std::abs(gridPosX - x) <= chunk_render_distance && std::abs(gridPosY - y) <= chunk_render_distance) {
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
+                shader.setMat4("u_model", model);
+                
+                glBindVertexArray(map_chunks[x + y*xMapChunks]);
+                glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
+            }
+        }
+    
+    // Render plants
+    model = glm::mat4(1.0f);
+    model = glm::scale(model, glm::vec3(MODEL_SCALE));
+    shader.setMat4("u_model", model);
+    
+    glBindVertexArray(flowerVAO);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 1300, 1024);
+
+    glBindVertexArray(treeVAO);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 4096, 1024);
+    
+    // Measure speed in ms per frame
+    double currentTime = glfwGetTime();
+    nbFrames++;
+    // If last prinf() was more than 1 sec ago printf and reset timer
+    if (currentTime - lastTime >= 1.0 ){
+        printf("%f ms/frame\n", 1000.0/double(nbFrames));
+        nbFrames = 0;
+        lastTime += 1.0;
+    }
+    
+    // Use double buffer
+    // Only swap old frame with new when it is completed
+    glfwPollEvents();
+    glfwSwapBuffers(window);
+}
+
 void load_model(GLuint &VAO, std::string filename) {
     std::vector<float> vertices;
     std::vector<int> indices;
     
-    objl::Loader Loader;
-    bool loadout = Loader.LoadFile(filename);
-    
-    float brightness = 2.5;
-    
-    if (loadout) {
-        // Go through each loaded mesh and out its contents
-        for (int i = 0; i < Loader.LoadedMeshes.size(); i++) {
-            // Copy one of the loaded meshes to be our current mesh
-            objl::Mesh curMesh = Loader.LoadedMeshes[i];
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
 
-            // Go through each vertex and print its number,
-            //  position, normal, and texture coordinate
-            for (int j = 0; j < curMesh.Vertices.size(); j++) {
-                // Vertices
-                vertices.push_back(curMesh.Vertices[j].Position.X);
-                vertices.push_back(curMesh.Vertices[j].Position.Y);
-                vertices.push_back(curMesh.Vertices[j].Position.Z);
-                // Normals
-                vertices.push_back(curMesh.Vertices[j].Normal.X);
-                vertices.push_back(curMesh.Vertices[j].Normal.Y);
-                vertices.push_back(curMesh.Vertices[j].Normal.Z);
-                // Colors
-                vertices.push_back(curMesh.MeshMaterial.Kd.X*brightness);
-                vertices.push_back(curMesh.MeshMaterial.Kd.Y*brightness);
-                vertices.push_back(curMesh.MeshMaterial.Kd.Z*brightness);
-            }
+    std::string warn;
+    std::string err;
 
-            for (int j = 0; j < curMesh.Indices.size(); j++) {
-                indices.push_back(curMesh.Indices[j]);
-            }
-        }
-    } else {
-        std::cout << "Failed to Load File. May have failed to find it or it was not an .obj file.\n";
+    tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str());
+
+    if (!warn.empty()) {
+        std::cout << warn << std::endl;
+    } else if (!err.empty()) {
+        std::cerr << err << std::endl;
     }
     
-    std::cout << "nIndices " << indices.size() << std::endl;
+    for (size_t s = 0; s < shapes.size(); s++) {
+        // Loop over faces(polygon)
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+            int fv = shapes[s].mesh.num_face_vertices[f];
+
+            // Loop over vertices in the face.
+            for (size_t v = 0; v < fv; v++) {
+                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+                vertices.push_back(attrib.vertices[3*idx.vertex_index+0]);
+                vertices.push_back(attrib.vertices[3*idx.vertex_index+1]);
+                vertices.push_back(attrib.vertices[3*idx.vertex_index+2]);
+                vertices.push_back(attrib.normals[3*idx.normal_index+0]);
+                vertices.push_back(attrib.normals[3*idx.normal_index+1]);
+                vertices.push_back(attrib.normals[3*idx.normal_index+2]);
+                vertices.push_back(materials[shapes[s].mesh.material_ids[f]].diffuse[0] * MODEL_BRIGHTNESS);
+                vertices.push_back(materials[shapes[s].mesh.material_ids[f]].diffuse[1] * MODEL_BRIGHTNESS);
+                vertices.push_back(materials[shapes[s].mesh.material_ids[f]].diffuse[2] * MODEL_BRIGHTNESS);
+            }
+            index_offset += fv;
+        }
+    }
     
     GLuint VBO, EBO;
     
@@ -169,14 +303,10 @@ void load_model(GLuint &VAO, std::string filename) {
     glGenBuffers(1, &EBO);
     glGenVertexArrays(1, &VAO);
     
-    // Bind vertices to VBOw
+    // Bind vertices to VBO
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
-    
-    // Create element buffer
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices[0], GL_STATIC_DRAW);
     
     // Configure vertex position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)0);
@@ -191,7 +321,7 @@ void load_model(GLuint &VAO, std::string filename) {
     glEnableVertexAttribArray(2);
 }
 
-void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset) {
+void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vector<plant> &plants) {
     std::vector<int> indices;
     std::vector<float> noise_map;
     std::vector<float> vertices;
@@ -203,7 +333,7 @@ void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset) {
     noise_map = generate_noise_map(xOffset, yOffset);
     vertices = generate_vertices(noise_map);
     normals = generate_normals(indices, vertices);
-    colors = generate_colors(vertices);
+    colors = generate_biome(vertices, plants, xOffset, yOffset);
     
     GLuint VBO[3], EBO;
     
@@ -240,92 +370,6 @@ void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset) {
     // Configure vertex colors attribute
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(2);
-}
-
-double lastTime = glfwGetTime();
-int nbFrames = 0;
-
-void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices, GLuint &treeVAO, GLuint &flowerVAO) {
-    // Per-frame time logic
-    currentFrame = glfwGetTime();
-    deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;
-    
-    processInput(window, shader);
-    
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // Activate shader
-    shader.use();
-
-    // Set projection and view matrix
-    // Last value is draw distance - set to render distance scaled by root 2
-    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, (float)chunkWidth * chunk_render_distance - chunkWidth / 4);
-    shader.setMat4("u_projection", projection);
-    view = camera.GetViewMatrix();
-    shader.setMat4("u_view", view);
-    
-    // Set view position
-    shader.setVec3("u_viewPos", camera.Position);
-    
-    // Dynamic lighting
-    lightPos = glm::vec3(originX + glm::sin(0.25*glfwGetTime()) * 10, 30.0, originY + glm::cos(0.25*glfwGetTime()) * 10);
-    shader.setVec3("u_lightPos", lightPos);
-    
-    // Measures number of map chunks away from origin map chunk the camera is
-    gridPosX = (int)(camera.Position.x - originX) / chunkWidth + xMapChunks / 2;
-    gridPosY = (int)(camera.Position.z - originY) / chunkHeight + yMapChunks / 2;
-    
-    // Render map chunks
-    for (int y = 0; y < yMapChunks; y++)
-        for (int x = 0; x < xMapChunks; x++) {
-            // Only render chunk if it's within render distance
-            if (std::abs(gridPosX - x) <= chunk_render_distance && std::abs(gridPosY - y) <= chunk_render_distance) {
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
-                shader.setMat4("u_model", model);
-                
-                glBindVertexArray(map_chunks[x + y*xMapChunks]);
-                glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
-            }
-        }
-    
-    // TODO Change model translation for the map chunk it was generated from
-    // Render flower
-    for (int i = 0; i < flowers.size(); i += 3) {
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + flowers[i], flowers[i+1], -chunkHeight / 2.0 + flowers[i+2]));
-        shader.setMat4("u_model", model);
-        
-        glBindVertexArray(flowerVAO);
-        glDrawElements(GL_TRIANGLES, 637, GL_UNSIGNED_INT, 0);
-    }
-    
-    // Render Trees
-    for (int i = 0; i < trees.size(); i += 3) {
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + trees[i], trees[i+1], -chunkHeight / 2.0 + trees[i+2]));
-        shader.setMat4("u_model", model);
-        
-        glBindVertexArray(treeVAO);
-        glDrawElements(GL_TRIANGLES, 8664, GL_UNSIGNED_INT, 0);
-    }
-    
-    // Measure speed in ms per frame
-    double currentTime = glfwGetTime();
-    nbFrames++;
-    // If last prinf() was more than 1 sec ago printf and reset timer
-    if (currentTime - lastTime >= 1.0 ){
-//        printf("%f ms/frame\n", 1000.0/double(nbFrames));
-        nbFrames = 0;
-        lastTime += 1.0;
-    }
-    
-    // Use double buffer
-    // Only swap old frame with new when it is completed
-    glfwPollEvents();
-    glfwSwapBuffers(window);
 }
 
 glm::vec3 get_color(int r, int g, int b) {
@@ -387,7 +431,7 @@ struct terrainColor {
     glm::vec3 color;
 };
 
-std::vector<float> generate_colors(const std::vector<float> &vertices) {
+std::vector<float> generate_biome(const std::vector<float> &vertices, std::vector<plant> &plants, int xOffset, int yOffset) {
     std::vector<float> colors;
     std::vector<terrainColor> biomeColors;
     glm::vec3 color = get_color(255, 255, 255);
@@ -402,6 +446,8 @@ std::vector<float> generate_colors(const std::vector<float> &vertices) {
     biomeColors.push_back(terrainColor(0.80, get_color( 75,  60,  55)));                // Rock 2
     biomeColors.push_back(terrainColor(1.00, get_color(255, 255, 255)));                // Snow
     
+    std::string plantType;
+    
     // Determine which color to assign each vertex by its y-coord
     // Iterate through vertex y values
     for (int i = 1; i < vertices.size(); i += 3) {
@@ -409,17 +455,14 @@ std::vector<float> generate_colors(const std::vector<float> &vertices) {
             // NOTE: The max height of a vertex is "meshHeight"
             if (vertices[i] <= biomeColors[j].height * meshHeight) {
                 color = biomeColors[j].color;
-                if (j >= 3 && j <= 4) {
-                    if (rand() % 100 < 10) {
+                if (j == 3) {
+                    if (rand() % 1000 < 10) {
                         if (rand() % 100 < 90) {
-                            flowers.push_back(vertices[i-1]);
-                            flowers.push_back(vertices[i]);
-                            flowers.push_back(vertices[i+1]);
+                            plantType = "flower";
                         } else {
-                            trees.push_back(vertices[i-1]);
-                            trees.push_back(vertices[i]);
-                            trees.push_back(vertices[i+1]);
+                            plantType = "tree";
                         }
+                        plants.push_back(plant{plantType, vertices[i-1], vertices[i], vertices[i+1], xOffset, yOffset});
                     }
                 }
                 break;
@@ -429,9 +472,6 @@ std::vector<float> generate_colors(const std::vector<float> &vertices) {
         colors.push_back(color.g);
         colors.push_back(color.b);
     }
-    
-    std::cout << flowers.size() / 3 << std::endl;
-    
     return colors;
 }
 

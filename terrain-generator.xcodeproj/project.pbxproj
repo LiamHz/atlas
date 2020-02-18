@@ -74,6 +74,7 @@
 		DF0FBE6723FA4C6C00DE3B80 /* Cactus_1.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Cactus_1.obj; sourceTree = "<group>"; };
 		DF0FBE8123FA68FB00DE3B80 /* CommonTree_4.obj */ = {isa = PBXFileReference; lastKnownFileType = text; path = CommonTree_4.obj; sourceTree = "<group>"; };
 		DF0FBE8223FA68FC00DE3B80 /* CommonTree_4.mtl */ = {isa = PBXFileReference; lastKnownFileType = text; path = CommonTree_4.mtl; sourceTree = "<group>"; };
+		DF0FBE8923FB0E3000DE3B80 /* tiny_obj_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tiny_obj_loader.h; sourceTree = "<group>"; };
 		DF1EED0723F6403D001DD8D1 /* terrain-generator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "terrain-generator"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DF1EED0A23F6403D001DD8D1 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		DF1EED1123F64255001DD8D1 /* shader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = shader.h; sourceTree = "<group>"; };
@@ -126,21 +127,30 @@
 			path = obj;
 			sourceTree = "<group>";
 		};
+		DF0FBE8D23FB32B600DE3B80 /* shaders */ = {
+			isa = PBXGroup;
+			children = (
+				DF1EED1423F64255001DD8D1 /* fshader.fs */,
+				DF1EED1223F64255001DD8D1 /* vshader.vs */,
+			);
+			path = shaders;
+			sourceTree = "<group>";
+		};
 		DF1EECFE23F6403D001DD8D1 = {
 			isa = PBXGroup;
 			children = (
+				DF0FBE8D23FB32B600DE3B80 /* shaders */,
 				DF1EED2223F6442B001DD8D1 /* terrain-generator.entitlements */,
 				DF1EED0A23F6403D001DD8D1 /* main.cpp */,
 				DF0FBE8823FAFF1200DE3B80 /* obj */,
 				DF0FBE5A23FA47C700DE3B80 /* obj_loader.h */,
+				DF0FBE8923FB0E3000DE3B80 /* tiny_obj_loader.h */,
 				DF1EED2523F71C40001DD8D1 /* perlin.h */,
 				DF1EED2423F66D01001DD8D1 /* .gitignore */,
 				DF1EED0823F6403D001DD8D1 /* Products */,
 				DF1EED1523F64255001DD8D1 /* camera.h */,
 				DF1EED1623F64255001DD8D1 /* glad.c */,
-				DF1EED1423F64255001DD8D1 /* fshader.fs */,
 				DF1EED1123F64255001DD8D1 /* shader.h */,
-				DF1EED1223F64255001DD8D1 /* vshader.vs */,
 				DF1EED2623F78526001DD8D1 /* demo.gif */,
 				DF1EED2723F7854E001DD8D1 /* README.md */,
 				DF1EED1B23F64366001DD8D1 /* Frameworks */,

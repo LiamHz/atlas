@@ -62,8 +62,8 @@ GLFWwindow *window;
 // Map params
 float WATER_HEIGHT = 0.1;
 int chunk_render_distance = 3;
-int xMapChunks = 16;
-int yMapChunks = 16;
+int xMapChunks = 12;
+int yMapChunks = 12;
 int chunkWidth = 127;
 int chunkHeight = 127;
 int gridPosX = 0;
@@ -79,7 +79,7 @@ float persistence = 0.5;
 float lacunarity = 2;
 
 // Model params
-float MODEL_SCALE = 2;
+float MODEL_SCALE = 3;
 float MODEL_BRIGHTNESS = 3;
 
 // FPS
@@ -131,7 +131,7 @@ int main() {
     std::vector<GLuint> tree_chunks(xMapChunks * yMapChunks);
     std::vector<GLuint> flower_chunks(xMapChunks * yMapChunks);
     
-    setup_instancing(treeVAO, tree_chunks, "tree", plants, "CommonTree_4.obj");
+    setup_instancing(treeVAO, tree_chunks, "tree", plants, "CommonTree_1.obj");
     setup_instancing(flowerVAO, flower_chunks, "flower", plants, "Flowers.obj");
     
     while (!glfwWindowShouldClose(window)) {
@@ -198,7 +198,7 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
     
     processInput(window, shader);
     
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(0.53, 0.81, 0.92, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Activate shader
@@ -243,10 +243,10 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
                     shader.setMat4("u_model", model);
 
                     glBindVertexArray(flower_chunks[x + y*xMapChunks]);
-                    glDrawArraysInstanced(GL_TRIANGLES, 0, 1300, 32);
+                    glDrawArraysInstanced(GL_TRIANGLES, 0, 1300, 16);
 
                     glBindVertexArray(tree_chunks[x + y*xMapChunks]);
-                    glDrawArraysInstanced(GL_TRIANGLES, 0, 4096, 32);
+                    glDrawArraysInstanced(GL_TRIANGLES, 0, 10192, 8);
                 }
             }
         }
@@ -469,8 +469,8 @@ std::vector<float> generate_biome(const std::vector<float> &vertices, std::vecto
             if (vertices[i] <= biomeColors[j].height * meshHeight) {
                 color = biomeColors[j].color;
                 if (j == 3) {
-                    if (rand() % 1000 < 8) {
-                        if (rand() % 100 < 90) {
+                    if (rand() % 1000 < 5) {
+                        if (rand() % 100 < 70) {
                             plantType = "flower";
                         } else {
                             plantType = "tree";

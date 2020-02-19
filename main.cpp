@@ -80,7 +80,7 @@ float lacunarity = 2;
 
 // Model params
 float MODEL_SCALE = 3;
-float MODEL_BRIGHTNESS = 3;
+float MODEL_BRIGHTNESS = 6;
 
 // FPS
 double lastTime = glfwGetTime();
@@ -111,12 +111,15 @@ int main() {
     
     Shader shader("vshader.vs", "fshader.fs");
     
-    // Lighting
+    // Default to coloring to flat mode
     shader.use();
-    shader.setVec3("u_lightColor", 1.0f, 1.0f, 1.0f);
-    
-    // Default to flat mode
     shader.setBool("isFlat", true);
+    
+    // Lighting intensities and direction
+    shader.setVec3("light.ambient", 0.5, 0.5, 0.5);
+    shader.setVec3("light.diffuse", 0.7, 0.7, 0.7);
+    shader.setVec3("light.specular", 1.0, 1.0, 1.0);
+    shader.setVec3("light.direction", -0.2f, -1.0f, -0.3f);
     
     std::vector<GLuint> map_chunks(xMapChunks * yMapChunks);
     
@@ -133,13 +136,16 @@ int main() {
     
     setup_instancing(treeVAO, tree_chunks, "tree", plants, "CommonTree_1.obj");
     setup_instancing(flowerVAO, flower_chunks, "flower", plants, "Flowers.obj");
-    
+
     while (!glfwWindowShouldClose(window)) {
         render(map_chunks, shader, view, model, projection, lightPos, nIndices, tree_chunks, flower_chunks);
     }
     
-    for (int i = 0; i < map_chunks.size(); i++)
+    for (int i = 0; i < map_chunks.size(); i++) {
         glDeleteVertexArrays(1, &map_chunks[i]);
+        glDeleteVertexArrays(1, &tree_chunks[i]);
+        glDeleteVertexArrays(1, &flower_chunks[i]);
+    }
     
     // TODO VBOs and EBOs aren't being deleted
     // glDeleteBuffers(3, VBO);
@@ -213,10 +219,6 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
     
     // Set view position
     shader.setVec3("u_viewPos", camera.Position);
-    
-    // Dynamic lighting
-    lightPos = glm::vec3(originX + glm::sin(0.6*glfwGetTime()) * chunkWidth * xMapChunks / 4, 50.0, originY + glm::cos(0.6*glfwGetTime()) * chunkHeight * yMapChunks / 4);
-    shader.setVec3("u_lightPos", lightPos);
     
     // Measures number of map chunks away from origin map chunk the camera is
     gridPosX = (int)(camera.Position.x - originX) / chunkWidth + xMapChunks / 2;
@@ -507,7 +509,7 @@ std::vector<float> generate_normals(const std::vector<int> &indices, const std::
         glm::vec3 V = verts[i+2] - verts[i];
         
         // Calculate normal
-        normal = glm::normalize(glm::cross(U, V));
+        normal = glm::normalize(-glm::cross(U, V));
         normals.push_back(normal.x);
         normals.push_back(normal.y);
         normals.push_back(normal.z);

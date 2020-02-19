@@ -11,19 +11,25 @@ uniform mat4 u_model;
 uniform mat4 u_view;
 uniform mat4 u_projection;
 
-uniform vec3 u_lightColor;
-uniform vec3 u_lightPos;
+struct Light {
+    vec3 direction;
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+
+uniform Light light;
 uniform vec3 u_viewPos;
 
 vec3 calculateLighting(vec3 Normal, vec3 FragPos) {
     // Ambient lighting
-    float ambientStrength = 0.7;
-    vec3 ambient = ambientStrength * u_lightColor;
+    vec3 ambient = light.ambient;
     
     // Diffuse lighting
-    vec3 lightDir = normalize(u_lightPos - FragPos);
-    float diff = max(dot(Normal, lightDir), 0.0);
-    vec3 diffuse = diff * u_lightColor;
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(-light.direction);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = light.diffuse * diff;
 
     // Specular lighting
     float specularStrength = 0.5;
@@ -31,7 +37,7 @@ vec3 calculateLighting(vec3 Normal, vec3 FragPos) {
     vec3 reflectDir = reflect(-lightDir, Normal);
 
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
-    vec3 specular = specularStrength * spec * u_lightColor;
+    vec3 specular = light.specular * spec;
     
     return (ambient + diffuse + specular);
 }

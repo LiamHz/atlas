@@ -39,13 +39,11 @@ struct plant {
 };
 
 // Functions
-std::vector<float> get_cube(int x, int y, int z);
-
 int init();
 void processInput(GLFWwindow *window, Shader &shader);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices, std::vector<GLuint> &tree_chunks, std::vector<GLuint> &flower_chunks);
+void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, int &nIndices, std::vector<GLuint> &tree_chunks, std::vector<GLuint> &flower_chunks);
 
 std::vector<int> generate_indices();
 std::vector<float> generate_noise_map(int xOffset, int yOffset);
@@ -54,6 +52,7 @@ std::vector<float> generate_normals(const std::vector<int> &indices, const std::
 std::vector<float> generate_biome(const std::vector<float> &vertices, std::vector<plant> &plants, int xOffset, int yOffset);
 void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vector<plant> &plants);
 
+glm::mat4 get_lightSpaceMatrix(glm::vec3 lightPos);
 void load_model(GLuint &VAO, std::string filename);
 void setup_instancing(GLuint &VAO, std::vector<GLuint> &plant_chunk, std::string plant_type, std::vector<plant> &plants, std::string filename);
 
@@ -62,8 +61,8 @@ GLFWwindow *window;
 // Map params
 float WATER_HEIGHT = 0.1;
 int chunk_render_distance = 3;
-int xMapChunks = 12;
-int yMapChunks = 12;
+int xMapChunks = 5;
+int yMapChunks = 5;
 int chunkWidth = 127;
 int chunkHeight = 127;
 int gridPosX = 0;
@@ -102,24 +101,24 @@ int main() {
     glm::mat4 view;
     glm::mat4 model;
     glm::mat4 projection;
-    glm::vec3 lightPos;
     std::vector<plant> plants;
 
     // Initialize GLFW and GLAD
     if (init() != 0)
         return -1;
     
-    Shader shader("vshader.vs", "fshader.fs");
+    Shader objectShader("objectShader.vert", "objectShader.frag");
+    Shader depthShader("depthShader.vert", "depthShader.frag");
     
     // Default to coloring to flat mode
-    shader.use();
-    shader.setBool("isFlat", true);
+    objectShader.use();
+    objectShader.setBool("isFlat", true);
     
     // Lighting intensities and direction
-    shader.setVec3("light.ambient", 0.5, 0.5, 0.5);
-    shader.setVec3("light.diffuse", 0.7, 0.7, 0.7);
-    shader.setVec3("light.specular", 1.0, 1.0, 1.0);
-    shader.setVec3("light.direction", -0.2f, -1.0f, -0.3f);
+    objectShader.setVec3("light.ambient", 0.1, 0.1, 0.1);
+    objectShader.setVec3("light.diffuse", 0.2, 0.2, 0.2);
+    objectShader.setVec3("light.specular", 1.0, 1.0, 1.0);
+    objectShader.setVec3("light.direction", -0.2f, -1.0f, -0.3f);
     
     std::vector<GLuint> map_chunks(xMapChunks * yMapChunks);
     
@@ -136,9 +135,65 @@ int main() {
     
     setup_instancing(treeVAO, tree_chunks, "tree", plants, "CommonTree_1.obj");
     setup_instancing(flowerVAO, flower_chunks, "flower", plants, "Flowers.obj");
-
+    
+    // Depth map
+    GLuint depthMapFBO;
+    glGenFramebuffers(1, &depthMapFBO);
+    
+    const GLuint SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    
+    GLuint depthMap;
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    objectShader.use();
+    objectShader.setInt("u_shadowMap", 0);
+    
+    glm::vec3 lightPos = glm::vec3(originX, 200.0f, originY);
+    glm::mat4 lightSpaceMatrix = get_lightSpaceMatrix(lightPos);
+    
+    int screenWidth, screenHeight;
+    glfwGetFramebufferSize(window, &screenWidth, &screenHeight);
+    
     while (!glfwWindowShouldClose(window)) {
-        render(map_chunks, shader, view, model, projection, lightPos, nIndices, tree_chunks, flower_chunks);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        
+        // Generate depth map for shadows
+        depthShader.use();
+        depthShader.setMat4("u_lightSpaceMatrix", lightSpaceMatrix);
+
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        render(map_chunks, depthShader, view, model, projection, nIndices, tree_chunks, flower_chunks);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // Generate scene with shadows
+        glViewport(0, 0, screenWidth, screenHeight);
+        glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+        
+        objectShader.use();
+        objectShader.setVec3("u_lightPos", lightPos);
+        objectShader.setMat4("u_lightSpaceMatrix", lightSpaceMatrix);
+        projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, (float)chunkWidth * (chunk_render_distance - 1.2f));
+        objectShader.setMat4("u_projection", projection);
+        view = camera.GetViewMatrix();
+        objectShader.setMat4("u_view", view);
+        objectShader.setVec3("u_viewPos", camera.Position);
+        // Shader and matrices config
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
+        render(map_chunks, objectShader, view, model, projection, nIndices, tree_chunks, flower_chunks);
     }
     
     for (int i = 0; i < map_chunks.size(); i++) {
@@ -154,6 +209,20 @@ int main() {
     glfwTerminate();
     
     return 0;
+}
+
+glm::mat4 get_lightSpaceMatrix(glm::vec3 lightPos) {
+    float near_plane = 1.0f;
+    float far_plane  = 7.5f;
+    
+    glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+    
+    glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0), glm::vec3( 0.0f, 1.0f,  0.0f));
+    
+    // Matrix used to convert from camera to light view space
+    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+    
+    return lightSpaceMatrix;
 }
 
 void setup_instancing(GLuint &VAO, std::vector<GLuint> &plant_chunk, std::string plant_type, std::vector<plant> &plants, std::string filename) {
@@ -196,7 +265,7 @@ void setup_instancing(GLuint &VAO, std::vector<GLuint> &plant_chunk, std::string
     }
 }
 
-void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, glm::vec3 &lightPos, int &nIndices, std::vector<GLuint> &tree_chunks, std::vector<GLuint> &flower_chunks) {
+void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, glm::mat4 &model, glm::mat4 &projection, int &nIndices, std::vector<GLuint> &tree_chunks, std::vector<GLuint> &flower_chunks) {
     // Per-frame time logic
     currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
@@ -206,19 +275,6 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
     
     glClearColor(0.53, 0.81, 0.92, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // Activate shader
-    shader.use();
-
-    // Set projection and view matrix
-    // Last value is draw distance - set to render distance scaled by root 2
-    projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, (float)chunkWidth * (chunk_render_distance - 1.2f));
-    shader.setMat4("u_projection", projection);
-    view = camera.GetViewMatrix();
-    shader.setMat4("u_view", view);
-    
-    // Set view position
-    shader.setVec3("u_viewPos", camera.Position);
     
     // Measures number of map chunks away from origin map chunk the camera is
     gridPosX = (int)(camera.Position.x - originX) / chunkWidth + xMapChunks / 2;
@@ -243,11 +299,13 @@ void render(std::vector<GLuint> &map_chunks, Shader &shader, glm::mat4 &view, gl
                 model = glm::scale(model, glm::vec3(MODEL_SCALE));
                 shader.setMat4("u_model", model);
 
+                glEnable(GL_CULL_FACE);
                 glBindVertexArray(flower_chunks[x + y*xMapChunks]);
                 glDrawArraysInstanced(GL_TRIANGLES, 0, 1300, 16);
 
                 glBindVertexArray(tree_chunks[x + y*xMapChunks]);
                 glDrawArraysInstanced(GL_TRIANGLES, 0, 10192, 8);
+                glDisable(GL_CULL_FACE);
             }
         }
     
@@ -598,6 +656,7 @@ int init() {
 
     // Enable z-buffer
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_FRAMEBUFFER_SRGB);
     
     // Enable mouse input
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -633,6 +692,21 @@ void processInput(GLFWwindow *window, Shader &shader) {
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
+    
+    if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) {
+        glEnable(GL_FRAMEBUFFER_SRGB);
+//        shader.setVec3("light.ambient", 0.2, 0.2, 0.2);
+        shader.setVec3("light.ambient", 0.05, 0.05, 0.05);
+        shader.setVec3("light.diffuse", 0.2, 0.2, 0.2);
+        shader.setVec3("light.specular", 1.0, 1.0, 1.0);
+    }
+    if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS) {
+        glDisable(GL_FRAMEBUFFER_SRGB);
+//        shader.setVec3("light.ambient", 0.5, 0.5, 0.5);
+        shader.setVec3("light.ambient", 0.1, 0.1, 0.1);
+        shader.setVec3("light.diffuse", 0.7, 0.7, 0.7);
+        shader.setVec3("light.specular", 1.0, 1.0, 1.0);
+    }
 }
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos) {

@@ -12,12 +12,14 @@
 		DF0FBE6C23FA4C8800DE3B80 /* Flowers.mtl in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE5F23FA4C6C00DE3B80 /* Flowers.mtl */; };
 		DF0FBE6D23FA4C8800DE3B80 /* Flowers.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF0FBE6023FA4C6C00DE3B80 /* Flowers.obj */; };
 		DF1EED0B23F6403D001DD8D1 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DF1EED0A23F6403D001DD8D1 /* main.cpp */; };
-		DF1EED1723F64255001DD8D1 /* glad.c in Sources */ = {isa = PBXBuildFile; fileRef = DF1EED1623F64255001DD8D1 /* glad.c */; };
-		DF1EED1923F64358001DD8D1 /* fshader.fs in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF1EED1423F64255001DD8D1 /* fshader.fs */; };
-		DF1EED1A23F64358001DD8D1 /* vshader.vs in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF1EED1223F64255001DD8D1 /* vshader.vs */; };
+		DF1EED1923F64358001DD8D1 /* objectShader.frag in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF1EED1423F64255001DD8D1 /* objectShader.frag */; };
+		DF1EED1A23F64358001DD8D1 /* objectShader.vert in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF1EED1223F64255001DD8D1 /* objectShader.vert */; };
 		DF1EED1D23F64366001DD8D1 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DF1EED1C23F64366001DD8D1 /* OpenGL.framework */; };
 		DF1EED1F23F6438E001DD8D1 /* libGLEW.2.1.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DF1EED1E23F6438E001DD8D1 /* libGLEW.2.1.0.dylib */; };
 		DF1EED2123F643AC001DD8D1 /* libglfw.3.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DF1EED2023F643AC001DD8D1 /* libglfw.3.3.dylib */; };
+		DF32D31223FF2C2E000C0059 /* glad.c in Sources */ = {isa = PBXBuildFile; fileRef = DF32D31023FF2C11000C0059 /* glad.c */; };
+		DF32D31B23FF8E30000C0059 /* depthShader.frag in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF32D31923FF7B54000C0059 /* depthShader.frag */; };
+		DF32D31C23FF8E30000C0059 /* depthShader.vert in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF32D31A23FF7B5D000C0059 /* depthShader.vert */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -27,31 +29,30 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
+				DF32D31B23FF8E30000C0059 /* depthShader.frag in CopyFiles */,
+				DF32D31C23FF8E30000C0059 /* depthShader.vert in CopyFiles */,
 				DF0FBE6A23FA4C8800DE3B80 /* CommonTree_1.mtl in CopyFiles */,
 				DF0FBE6B23FA4C8800DE3B80 /* CommonTree_1.obj in CopyFiles */,
 				DF0FBE6C23FA4C8800DE3B80 /* Flowers.mtl in CopyFiles */,
 				DF0FBE6D23FA4C8800DE3B80 /* Flowers.obj in CopyFiles */,
-				DF1EED1923F64358001DD8D1 /* fshader.fs in CopyFiles */,
-				DF1EED1A23F64358001DD8D1 /* vshader.vs in CopyFiles */,
+				DF1EED1923F64358001DD8D1 /* objectShader.frag in CopyFiles */,
+				DF1EED1A23F64358001DD8D1 /* objectShader.vert in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		DF0FBE5A23FA47C700DE3B80 /* obj_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = obj_loader.h; sourceTree = "<group>"; };
 		DF0FBE5E23FA4C6C00DE3B80 /* CommonTree_1.mtl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CommonTree_1.mtl; sourceTree = "<group>"; };
 		DF0FBE5F23FA4C6C00DE3B80 /* Flowers.mtl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Flowers.mtl; sourceTree = "<group>"; };
 		DF0FBE6023FA4C6C00DE3B80 /* Flowers.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Flowers.obj; sourceTree = "<group>"; };
 		DF0FBE6123FA4C6C00DE3B80 /* CommonTree_1.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CommonTree_1.obj; sourceTree = "<group>"; };
-		DF0FBE8923FB0E3000DE3B80 /* tiny_obj_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tiny_obj_loader.h; sourceTree = "<group>"; };
 		DF1EED0723F6403D001DD8D1 /* terrain-generator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "terrain-generator"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DF1EED0A23F6403D001DD8D1 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		DF1EED1123F64255001DD8D1 /* shader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = shader.h; sourceTree = "<group>"; };
-		DF1EED1223F64255001DD8D1 /* vshader.vs */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = vshader.vs; sourceTree = "<group>"; };
-		DF1EED1423F64255001DD8D1 /* fshader.fs */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = fshader.fs; sourceTree = "<group>"; };
+		DF1EED1223F64255001DD8D1 /* objectShader.vert */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = objectShader.vert; sourceTree = "<group>"; };
+		DF1EED1423F64255001DD8D1 /* objectShader.frag */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = objectShader.frag; sourceTree = "<group>"; };
 		DF1EED1523F64255001DD8D1 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
-		DF1EED1623F64255001DD8D1 /* glad.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = glad.c; sourceTree = "<group>"; };
 		DF1EED1C23F64366001DD8D1 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		DF1EED1E23F6438E001DD8D1 /* libGLEW.2.1.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGLEW.2.1.0.dylib; path = ../../../../../../usr/local/Cellar/glew/2.1.0_1/lib/libGLEW.2.1.0.dylib; sourceTree = "<group>"; };
 		DF1EED2023F643AC001DD8D1 /* libglfw.3.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libglfw.3.3.dylib; path = ../../../../../../usr/local/Cellar/glfw/3.3.2/lib/libglfw.3.3.dylib; sourceTree = "<group>"; };
@@ -60,6 +61,11 @@
 		DF1EED2523F71C40001DD8D1 /* perlin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = perlin.h; sourceTree = "<group>"; };
 		DF1EED2623F78526001DD8D1 /* demo.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = demo.gif; sourceTree = "<group>"; };
 		DF1EED2723F7854E001DD8D1 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		DF32D30E23FF2C11000C0059 /* tiny_obj_loader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tiny_obj_loader.h; sourceTree = "<group>"; };
+		DF32D30F23FF2C11000C0059 /* stb_image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
+		DF32D31023FF2C11000C0059 /* glad.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = glad.c; sourceTree = "<group>"; };
+		DF32D31923FF7B54000C0059 /* depthShader.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = depthShader.frag; sourceTree = "<group>"; };
+		DF32D31A23FF7B5D000C0059 /* depthShader.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = depthShader.vert; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,8 +96,10 @@
 		DF0FBE8D23FB32B600DE3B80 /* shaders */ = {
 			isa = PBXGroup;
 			children = (
-				DF1EED1423F64255001DD8D1 /* fshader.fs */,
-				DF1EED1223F64255001DD8D1 /* vshader.vs */,
+				DF1EED1423F64255001DD8D1 /* objectShader.frag */,
+				DF1EED1223F64255001DD8D1 /* objectShader.vert */,
+				DF32D31923FF7B54000C0059 /* depthShader.frag */,
+				DF32D31A23FF7B5D000C0059 /* depthShader.vert */,
 			);
 			path = shaders;
 			sourceTree = "<group>";
@@ -99,17 +107,15 @@
 		DF1EECFE23F6403D001DD8D1 = {
 			isa = PBXGroup;
 			children = (
+				DF32D30D23FF2C06000C0059 /* lib */,
 				DF0FBE8D23FB32B600DE3B80 /* shaders */,
 				DF1EED2223F6442B001DD8D1 /* terrain-generator.entitlements */,
 				DF1EED0A23F6403D001DD8D1 /* main.cpp */,
 				DF0FBE8823FAFF1200DE3B80 /* obj */,
-				DF0FBE5A23FA47C700DE3B80 /* obj_loader.h */,
-				DF0FBE8923FB0E3000DE3B80 /* tiny_obj_loader.h */,
 				DF1EED2523F71C40001DD8D1 /* perlin.h */,
 				DF1EED2423F66D01001DD8D1 /* .gitignore */,
 				DF1EED0823F6403D001DD8D1 /* Products */,
 				DF1EED1523F64255001DD8D1 /* camera.h */,
-				DF1EED1623F64255001DD8D1 /* glad.c */,
 				DF1EED1123F64255001DD8D1 /* shader.h */,
 				DF1EED2623F78526001DD8D1 /* demo.gif */,
 				DF1EED2723F7854E001DD8D1 /* README.md */,
@@ -133,6 +139,16 @@
 				DF1EED1C23F64366001DD8D1 /* OpenGL.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		DF32D30D23FF2C06000C0059 /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				DF32D31023FF2C11000C0059 /* glad.c */,
+				DF32D30F23FF2C11000C0059 /* stb_image.h */,
+				DF32D30E23FF2C11000C0059 /* tiny_obj_loader.h */,
+			);
+			path = lib;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -192,8 +208,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DF32D31223FF2C2E000C0059 /* glad.c in Sources */,
 				DF1EED0B23F6403D001DD8D1 /* main.cpp in Sources */,
-				DF1EED1723F64255001DD8D1 /* glad.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

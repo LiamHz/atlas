@@ -16,21 +16,18 @@ struct Light {
 
 uniform Light light;
 uniform vec3 u_viewPos;
-uniform vec3 u_lightPos;
 
 uniform mat4 u_model;
 uniform mat4 u_view;
 uniform mat4 u_projection;
-uniform mat4 u_lightSpaceMatrix;
-uniform sampler2D u_shadowMap;
 
-vec3 calculateLighting(vec3 Normal, vec3 FragPos, float shadow) {
+vec3 calculateLighting(vec3 Normal, vec3 FragPos) {
     // Ambient lighting
     vec3 ambient = light.ambient;
     
     // Diffuse lighting
     vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(u_lightPos - FragPos);
+    vec3 lightDir = normalize(-light.direction);
     float diff = max(dot(lightDir, norm), 0.0);
     vec3 diffuse = light.diffuse * diff;
 
@@ -42,30 +39,15 @@ vec3 calculateLighting(vec3 Normal, vec3 FragPos, float shadow) {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
     vec3 specular = light.specular * spec;
     
-    return (ambient + (1.0 - shadow) * (diffuse + specular));
-}
-
-float calculateShadow(vec4 fragPosLightSpace) {
-    // Perspective divide
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // Transform to NDC
-    projCoords = projCoords * 0.5 + 0.5;
-    float closestDepth = texture(u_shadowMap, projCoords.xy).r;
-    float currentDepth = projCoords.z;
-    float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
-
-    return shadow;
+    return (ambient + diffuse + specular);
 }
 
 void main() {
     vec3 FragPos = vec3(u_model * vec4(aPos + aOffset, 1.0));
-//    vec3 Normal = aNormal;
-    vec3 Normal = transpose(inverse(mat3(u_model))) * aNormal;
-    
-    vec4 fragPosLightSpace = u_lightSpaceMatrix * vec4(FragPos, 1.0);
-    float shadow = calculateShadow(fragPosLightSpace);
-    
-    vec3 lighting = calculateLighting(Normal, FragPos, shadow);
+    vec3 Normal = aNormal;
+//    vec3 Normal = transpose(inverse(mat3(u_model))) * aNormal;
+
+    vec3 lighting = calculateLighting(Normal, FragPos);
     Color = aColor * lighting;
     flatColor = Color;
     

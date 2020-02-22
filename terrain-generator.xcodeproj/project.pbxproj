@@ -18,8 +18,6 @@
 		DF1EED1F23F6438E001DD8D1 /* libGLEW.2.1.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DF1EED1E23F6438E001DD8D1 /* libGLEW.2.1.0.dylib */; };
 		DF1EED2123F643AC001DD8D1 /* libglfw.3.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DF1EED2023F643AC001DD8D1 /* libglfw.3.3.dylib */; };
 		DF32D31223FF2C2E000C0059 /* glad.c in Sources */ = {isa = PBXBuildFile; fileRef = DF32D31023FF2C11000C0059 /* glad.c */; };
-		DF32D31B23FF8E30000C0059 /* depthShader.frag in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF32D31923FF7B54000C0059 /* depthShader.frag */; };
-		DF32D31C23FF8E30000C0059 /* depthShader.vert in CopyFiles */ = {isa = PBXBuildFile; fileRef = DF32D31A23FF7B5D000C0059 /* depthShader.vert */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -29,8 +27,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
-				DF32D31B23FF8E30000C0059 /* depthShader.frag in CopyFiles */,
-				DF32D31C23FF8E30000C0059 /* depthShader.vert in CopyFiles */,
 				DF0FBE6A23FA4C8800DE3B80 /* CommonTree_1.mtl in CopyFiles */,
 				DF0FBE6B23FA4C8800DE3B80 /* CommonTree_1.obj in CopyFiles */,
 				DF0FBE6C23FA4C8800DE3B80 /* Flowers.mtl in CopyFiles */,
@@ -64,8 +60,6 @@
 		DF32D30E23FF2C11000C0059 /* tiny_obj_loader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tiny_obj_loader.h; sourceTree = "<group>"; };
 		DF32D30F23FF2C11000C0059 /* stb_image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
 		DF32D31023FF2C11000C0059 /* glad.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = glad.c; sourceTree = "<group>"; };
-		DF32D31923FF7B54000C0059 /* depthShader.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = depthShader.frag; sourceTree = "<group>"; };
-		DF32D31A23FF7B5D000C0059 /* depthShader.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = depthShader.vert; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -98,8 +92,6 @@
 			children = (
 				DF1EED1423F64255001DD8D1 /* objectShader.frag */,
 				DF1EED1223F64255001DD8D1 /* objectShader.vert */,
-				DF32D31923FF7B54000C0059 /* depthShader.frag */,
-				DF32D31A23FF7B5D000C0059 /* depthShader.vert */,
 			);
 			path = shaders;
 			sourceTree = "<group>";

@@ -1,5 +1,5 @@
-# Terrain Generator
-A terrain generator implemented from scratch with C++ and OpenGL
+# Atlas
+Atlas is an OpenGL procedural terrain generation application that implements perlin noise height maps, view frustum culling, and instancing.
 
 ![Demo gif](https://github.com/LiamHz/terrain-generator/blob/master/demo.gif "Demo gif")
 

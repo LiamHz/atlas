@@ -5,7 +5,7 @@
 #include <math.h>
 #include <cstdlib>
 
-#include <glad/glad.h>
+#include "glad.h"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -600,7 +600,7 @@ int init() {
 }
 
 void processInput(GLFWwindow *window, Shader &shader) {
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     
     // Enable wireframe mode

@@ -2,3 +2,5 @@
 *.plist
 terrain-generator.xcodeproj/*
 !terrain-generator.xcodeproj/project.pbxproj
+build/*
+.vscode/*
